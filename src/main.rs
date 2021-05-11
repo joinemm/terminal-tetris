@@ -221,15 +221,15 @@ impl Piece {
         blocking_tiles: &Vec<Vec2>,
         arena_dimensions: &Vec2,
     ) -> bool {
-        let mut can_move = false;
+        let mut can_move = true;
 
         for tile in &self.tiles {
             let future_tile = tile.clone() + movement;
-            if !blocking_tiles.contains(&future_tile)
-                && future_tile.x >= 0
-                && future_tile.x < arena_dimensions.x
+            if blocking_tiles.contains(&future_tile)
+                || future_tile.x < 0
+                || future_tile.x > arena_dimensions.x
             {
-                can_move = true;
+                can_move = false;
                 break;
             }
         }
@@ -308,6 +308,7 @@ struct GameState {
     pub dimension: Vec2,
     pub tiles: Vec<Vec2>,
     pub current_piece: Piece,
+    pub score: u32,
     pub last_update: usize,
     pub last_rotate: usize,
     pub last_input: (usize, i32), // frame, direction
@@ -323,6 +324,7 @@ impl GameState {
             last_input: (0, 0),
             last_rotate: 0,
             drop_speed: 20,
+            score: 0,
             current_piece: Piece::new(Vec2::xy(dimension.x / 2, 0)),
         }
     }
@@ -376,8 +378,12 @@ impl GameState {
     pub fn tile_move_x(&mut self, displacement: i32, frame: usize) {
         if self.last_input.0 + 5 < frame || self.last_input.1 != displacement {
             self.last_input = (frame, displacement);
-            if !self.will_collide(Vec2::xy(displacement, 0), true) {
-                self.current_piece.move_piece(Vec2::xy(displacement, 0));
+            let movement = Vec2::xy(displacement, 0);
+            if self
+                .current_piece
+                .can_move(movement, &self.tiles, &self.dimension)
+            {
+                self.current_piece.move_piece(movement);
             }
         }
     }
@@ -399,6 +405,7 @@ impl GameState {
         for y in 0..self.dimension.y + 1 {
             let row: Vec<Vec2> = (0..self.dimension.x + 1).map(|x| Vec2::xy(x, y)).collect();
             if row.iter().all(|item| self.tiles.contains(item)) {
+                self.score += 1;
                 &self.tiles.retain(|t| t.y != y);
                 for tile in &mut self.tiles {
                     if tile.y < y {
@@ -444,7 +451,8 @@ fn main() {
 
         let win_size = window.size();
         let mut pencil = Pencil::new(window.canvas_mut());
-        pencil.set_origin((win_size - state.dimension) / 2);
+        let origin = (win_size - Vec2::xy(state.dimension.x * 2, state.dimension.y)) / 2;
+        pencil.set_origin(origin);
 
         if state.hit_ceiling() {
             let status_msg = "You lose :(";
@@ -475,5 +483,8 @@ fn main() {
                 }
             }
         }
+
+        pencil.set_origin(Vec2::xy(origin.x + state.dimension.x * 2 + 6, origin.y));
+        pencil.draw_text(&format!("score: {}", state.score), Vec2::xy(0, 0));
     });
 }
