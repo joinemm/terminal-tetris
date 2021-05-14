@@ -171,6 +171,42 @@ fn modulo(x: i32, m: i32) -> i32 {
     (x % m + m) % m
 }
 
+#[derive(Clone, Eq)]
+struct Tile {
+    color: Color,
+    location: Vec2,
+}
+
+impl std::ops::Deref for Tile {
+    type Target = Vec2;
+    fn deref(&self) -> &Self::Target {
+        &self.location
+    }
+}
+impl std::ops::DerefMut for Tile {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.location
+    }
+}
+impl PartialEq for Tile {
+    fn eq(&self, other: &Self) -> bool {
+        self.location == other.location
+    }
+}
+
+impl Tile {
+    pub fn new(location: Vec2) -> Self {
+        Self {
+            color: Color::White,
+            location,
+        }
+    }
+
+    pub fn with_color(location: Vec2, color: Color) -> Self {
+        Self { color, location }
+    }
+}
+
 #[derive(Clone)]
 struct Piece {
     piece_type: PieceType,
@@ -218,13 +254,13 @@ impl Piece {
     fn can_move(
         &self,
         movement: Vec2,
-        blocking_tiles: &Vec<Vec2>,
+        blocking_tiles: &Vec<Tile>,
         arena_dimensions: &Vec2,
     ) -> bool {
         let mut can_move = true;
 
         for tile in &self.tiles {
-            let future_tile = tile.clone() + movement;
+            let future_tile = Tile::new(*tile + movement);
             if blocking_tiles.contains(&future_tile)
                 || future_tile.x < 0
                 || future_tile.x > arena_dimensions.x
@@ -241,7 +277,7 @@ impl Piece {
     fn offset(
         &mut self,
         new_rotation_index: usize,
-        blocking_tiles: &Vec<Vec2>,
+        blocking_tiles: &Vec<Tile>,
         arena_dimensions: &Vec2,
     ) -> bool {
         let mut offset_1: Vec2;
@@ -271,7 +307,7 @@ impl Piece {
     pub fn rotate(
         &mut self,
         clockwise: bool,
-        blocking_tiles: &Vec<Vec2>,
+        blocking_tiles: &Vec<Tile>,
         arena_dimensions: &Vec2,
         do_offset: bool,
     ) {
@@ -307,7 +343,7 @@ impl Piece {
 
 struct GameState {
     pub dimension: Vec2,
-    pub tiles: Vec<Vec2>,
+    pub tiles: Vec<Tile>,
     pub current_piece: Piece,
     pub score: u32,
     pub last_update: usize,
@@ -339,7 +375,10 @@ impl GameState {
             } else {
                 // make piece part of current tile set and spawn a new piece
                 for tile in &self.current_piece.tiles {
-                    self.tiles.push(tile.clone())
+                    self.tiles.push(Tile::with_color(
+                        *tile,
+                        self.current_piece.piece_type.get_color(),
+                    ))
                 }
                 self.spawn_piece();
             }
@@ -384,7 +423,10 @@ impl GameState {
     pub fn clear_rows(&mut self) {
         for y in 0..self.dimension.y + 1 {
             let row: Vec<Vec2> = (0..self.dimension.x + 1).map(|x| Vec2::xy(x, y)).collect();
-            if row.iter().all(|item| self.tiles.contains(item)) {
+            if row
+                .iter()
+                .all(|item| self.tiles.contains(&Tile::new(*item)))
+            {
                 self.score += 1;
                 &self.tiles.retain(|t| t.y != y);
                 for tile in &mut self.tiles {
@@ -452,8 +494,8 @@ fn main() {
                 pencil.draw_char('■', Vec2::xy(pos.x * 2, pos.y));
             }
         }
-        pencil.set_foreground(Color::Grey);
         for tile in &state.tiles {
+            pencil.set_foreground(tile.color);
             pencil.draw_char('■', Vec2::xy(tile.x * 2, tile.y));
         }
 
