@@ -23,7 +23,7 @@ impl PieceType {
     pub fn get_color(&self) -> Color {
         match self {
             PieceType::J => Color::Blue,
-            PieceType::L => Color::Grey,
+            PieceType::L => Color::LightGrey,
             PieceType::S => Color::Green,
             PieceType::T => Color::Magenta,
             PieceType::Z => Color::Red,
@@ -228,6 +228,7 @@ impl Piece {
             if blocking_tiles.contains(&future_tile)
                 || future_tile.x < 0
                 || future_tile.x > arena_dimensions.x
+                || future_tile.y > arena_dimensions.y
             {
                 can_move = false;
                 break;
@@ -310,7 +311,6 @@ struct GameState {
     pub current_piece: Piece,
     pub score: u32,
     pub last_update: usize,
-    pub last_rotate: usize,
     pub last_input: (usize, i32), // frame, direction
     pub drop_speed: usize,
 }
@@ -322,7 +322,6 @@ impl GameState {
             tiles: Vec::new(),
             last_update: 0,
             last_input: (0, 0),
-            last_rotate: 0,
             drop_speed: 20,
             score: 0,
             current_piece: Piece::new(Vec2::xy(dimension.x / 2, 0)),
@@ -332,13 +331,17 @@ impl GameState {
     pub fn update(&mut self, frame: usize) {
         if self.last_update + self.drop_speed < frame {
             self.last_update = frame;
-            if self.will_collide(Vec2::xy(0, 1), false) {
+            if self
+                .current_piece
+                .can_move(Vec2::xy(0, 1), &self.tiles, &self.dimension)
+            {
+                self.current_piece.move_piece(Vec2::xy(0, 1));
+            } else {
+                // make piece part of current tile set and spawn a new piece
                 for tile in &self.current_piece.tiles {
                     self.tiles.push(tile.clone())
                 }
                 self.spawn_piece();
-            } else {
-                self.current_piece.move_piece(Vec2::xy(0, 1));
             }
         }
     }
@@ -350,29 +353,6 @@ impl GameState {
 
     pub fn spawn_piece(&mut self) {
         self.current_piece = Piece::new(Vec2::xy(self.dimension.x / 2, 0))
-    }
-
-    pub fn will_collide(&mut self, movement: Vec2, walls: bool) -> bool {
-        let mut future_piece = self.current_piece.clone();
-        future_piece.move_piece(movement);
-        let mut collision = false;
-        for piece_tile in future_piece.tiles {
-            if walls && (piece_tile.x < 0 || piece_tile.x > self.dimension.x) {
-                collision = true;
-                break;
-            }
-            if piece_tile.y > self.dimension.y {
-                collision = true;
-                break;
-            }
-            for tile in &self.tiles {
-                if *tile == piece_tile {
-                    collision = true;
-                    break;
-                }
-            }
-        }
-        collision
     }
 
     pub fn tile_move_x(&mut self, displacement: i32, frame: usize) {
@@ -424,25 +404,27 @@ fn main() {
     app.run(|app_state: &mut State, window: &mut Window| {
         for key_event in app_state.keyboard().last_key_events() {
             match key_event {
-                KeyEvent::Pressed(Key::Esc) => app_state.stop(),
-                KeyEvent::Pressed(Key::Q) => state.rotate_piece(false),
-                KeyEvent::Pressed(Key::R) => state.rotate_piece(true),
-                KeyEvent::Released(Key::A) => {
+                KeyEvent::Pressed(Key::Esc) | KeyEvent::Pressed(Key::Q) => app_state.stop(),
+                KeyEvent::Pressed(Key::Z) => state.rotate_piece(false),
+                KeyEvent::Pressed(Key::X) | KeyEvent::Pressed(Key::Up) => state.rotate_piece(true),
+                KeyEvent::Released(Key::Left) => {
                     state.last_input = (0, -1);
                 }
-                KeyEvent::Released(Key::D) => {
+                KeyEvent::Released(Key::Right) => {
                     state.last_input = (0, 1);
                 }
-                KeyEvent::Released(Key::Space) | KeyEvent::Released(Key::S) => state.set_speed(20),
+                KeyEvent::Released(Key::Space) | KeyEvent::Released(Key::Down) => {
+                    state.set_speed(20)
+                }
                 _ => (),
             }
         }
 
         for key_down in app_state.keyboard().get_keys_down() {
             match key_down {
-                Key::A => state.tile_move_x(-1, app_state.step()),
-                Key::D => state.tile_move_x(1, app_state.step()),
-                Key::Space | Key::S => state.set_speed(0),
+                Key::Left => state.tile_move_x(-1, app_state.step()),
+                Key::Right => state.tile_move_x(1, app_state.step()),
+                Key::Space | Key::Down => state.set_speed(0),
                 _ => (),
             }
         }
@@ -470,7 +452,7 @@ fn main() {
                 pencil.draw_char('■', Vec2::xy(pos.x * 2, pos.y));
             }
         }
-        pencil.set_foreground(Color::DarkGrey);
+        pencil.set_foreground(Color::Grey);
         for tile in &state.tiles {
             pencil.draw_char('■', Vec2::xy(tile.x * 2, tile.y));
         }
