@@ -428,7 +428,7 @@ impl GameState {
                 .all(|item| self.tiles.contains(&Tile::new(*item)))
             {
                 self.score += 1;
-                &self.tiles.retain(|t| t.y != y);
+                self.tiles.retain(|t| t.y != y);
                 for tile in &mut self.tiles {
                     if tile.y < y {
                         tile.y += 1;
