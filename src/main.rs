@@ -2,11 +2,14 @@ use rand::{
     distributions::{Distribution, Standard},
     Rng,
 };
-use ruscii::app::{App, Config, State};
 use ruscii::drawing::Pencil;
 use ruscii::keyboard::{Key, KeyEvent};
 use ruscii::spatial::Vec2;
 use ruscii::terminal::{Color, Window};
+use ruscii::{
+    app::{App, Config, State},
+    terminal::VisualElement,
+};
 
 #[derive(Clone)]
 enum PieceType {
@@ -22,13 +25,13 @@ enum PieceType {
 impl PieceType {
     pub fn get_color(&self) -> Color {
         match self {
-            PieceType::J => Color::Blue,
-            PieceType::L => Color::LightGrey,
-            PieceType::S => Color::Green,
-            PieceType::T => Color::Magenta,
-            PieceType::Z => Color::Red,
-            PieceType::I => Color::Cyan,
-            PieceType::O => Color::Yellow,
+            PieceType::J => Color::Xterm(9),
+            PieceType::L => Color::Xterm(10),
+            PieceType::S => Color::Xterm(11),
+            PieceType::T => Color::Xterm(12),
+            PieceType::Z => Color::Xterm(13),
+            PieceType::I => Color::Xterm(14),
+            PieceType::O => Color::Xterm(15),
         }
     }
     pub fn get_tiles(&self) -> Vec<Vec2> {
@@ -197,7 +200,7 @@ impl PartialEq for Tile {
 impl Tile {
     pub fn new(location: Vec2) -> Self {
         Self {
-            color: Color::White,
+            color: Color::Xterm(8),
             location,
         }
     }
@@ -251,12 +254,7 @@ impl Piece {
         tilemap
     }
 
-    fn can_move(
-        &self,
-        movement: Vec2,
-        blocking_tiles: &Vec<Tile>,
-        arena_dimensions: &Vec2,
-    ) -> bool {
+    fn can_move(&self, movement: Vec2, blocking_tiles: &[Tile], arena_dimensions: &Vec2) -> bool {
         let mut can_move = true;
 
         for tile in &self.tiles {
@@ -277,7 +275,7 @@ impl Piece {
     fn offset(
         &mut self,
         new_rotation_index: usize,
-        blocking_tiles: &Vec<Tile>,
+        blocking_tiles: &[Tile],
         arena_dimensions: &Vec2,
     ) -> bool {
         let mut offset_1: Vec2;
@@ -287,9 +285,9 @@ impl Piece {
 
         let dataset = self.piece_type.offset_data();
 
-        for test_index in 0..dataset.len() {
-            offset_1 = dataset[test_index][self.rotation_index as usize];
-            offset_2 = dataset[test_index][new_rotation_index as usize];
+        for piece_offset in dataset {
+            offset_1 = piece_offset[self.rotation_index];
+            offset_2 = piece_offset[new_rotation_index];
             end_offset = offset_1 - offset_2;
             if self.can_move(end_offset, blocking_tiles, arena_dimensions) {
                 move_possible = true;
@@ -417,7 +415,7 @@ impl GameState {
                 return true;
             }
         }
-        return false;
+        false
     }
 
     pub fn clear_rows(&mut self) {
@@ -440,10 +438,24 @@ impl GameState {
 }
 
 fn main() {
+    let controls_text: Vec<&str> = vec![
+        "⇦ ⇨ : move piece",
+        "X, ⇧ : rotate clockwise",
+        "Z : rotate counterclockwise",
+        "SPACE, ⇩ : drop piece",
+        "ESC, Q : quit game",
+    ];
+
     let mut app = App::config(Config { fps: 60 });
     let mut state = GameState::new(Vec2::xy(9, 19));
+    let mut default = VisualElement::new();
+
+    // use xterm 0 for background color
+    default.background = Color::Xterm(0);
 
     app.run(|app_state: &mut State, window: &mut Window| {
+        window.canvas_mut().set_default_element(&default);
+
         for key_event in app_state.keyboard().last_key_events() {
             match key_event {
                 KeyEvent::Pressed(Key::Esc) | KeyEvent::Pressed(Key::Q) => app_state.stop(),
@@ -479,11 +491,10 @@ fn main() {
         pencil.set_origin(origin);
 
         if state.hit_ceiling() {
-            let status_msg = "You lose :(";
-            let msg = &format!("{}", status_msg);
+            let msg = format!("You lose :( score: {}", state.score);
             pencil.set_origin(win_size / 2 - Vec2::x(msg.len() / 2));
-            pencil.draw_text(msg, Vec2::zero());
-            return ();
+            pencil.draw_text(&msg, Vec2::zero());
+            return;
         }
 
         state.clear_rows();
@@ -499,16 +510,30 @@ fn main() {
             pencil.draw_char('■', Vec2::xy(tile.x * 2, tile.y));
         }
 
-        pencil.set_foreground(Color::White);
+        pencil.set_foreground(Color::Xterm(8));
         for y in 0..state.dimension.y + 3 {
-            for x in 0..state.dimension.x + 3 {
-                if y == 0 || x == 0 || y == state.dimension.y + 2 || x == state.dimension.x + 2 {
-                    pencil.draw_char('■', Vec2::xy(x * 2 - 2, y - 1));
+            for x in 0..state.dimension.x + 2 {
+                // let mut c: Option<char> = None;
+                // if y == 0 || x == 0 || y == state.dimension.y + 2 || x == state.dimension.x + 2 {
+                //     pencil.draw_char('■', Vec2::xy(x * 2 - 2, y - 1));
+                // }
+                if x == 0 || x == state.dimension.x + 1 {
+                    pencil.draw_char('│', Vec2::xy(x * 2 - 1, y - 1));
+                } else if y == 0 || y == state.dimension.y + 2 {
+                    pencil.draw_char('─', Vec2::xy(x * 2 - 2, y - 1));
+                    pencil.draw_char('─', Vec2::xy(x * 2 - 1, y - 1));
+                    pencil.draw_char('─', Vec2::xy(x * 2, y - 1));
                 }
+                // if let Some(v) = c {
+                // }
             }
         }
 
+        pencil.set_foreground(Color::Xterm(15));
         pencil.set_origin(Vec2::xy(origin.x + state.dimension.x * 2 + 6, origin.y));
         pencil.draw_text(&format!("score: {}", state.score), Vec2::xy(0, 0));
+        for (i, ctrl) in controls_text.iter().enumerate() {
+            pencil.draw_text(ctrl, Vec2::xy(0, 2 + i));
+        }
     });
 }
