@@ -1,6 +1,6 @@
 [package]
 name = "terminal-tetris"
-version = "1.2"
+version = "1.3.0"
 authors = ["Joinemm <joinemm@pm.me>"]
 edition = "2021"
 
