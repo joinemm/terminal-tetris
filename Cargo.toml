@@ -1,7 +1,7 @@
 [package]
-name = "rusty-tetris"
-version = "0.1.0"
-authors = ["Joinemm <joonas@rautiola.co>"]
+name = "terminal-tetris"
+version = "1.2"
+authors = ["Joinemm <joinemm@pm.me>"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
