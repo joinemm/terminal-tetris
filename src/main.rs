@@ -502,30 +502,27 @@ fn main() {
         pencil.set_foreground(state.current_piece.piece_type.get_color());
         for pos in &state.current_piece.tiles {
             if pos.y >= 0 {
-                pencil.draw_char('■', Vec2::xy(pos.x * 2, pos.y));
+                pencil.draw_char('[', Vec2::xy(pos.x * 2, pos.y));
+                pencil.draw_char(']', Vec2::xy(pos.x * 2 + 1, pos.y));
             }
         }
         for tile in &state.tiles {
             pencil.set_foreground(tile.color);
-            pencil.draw_char('■', Vec2::xy(tile.x * 2, tile.y));
+            pencil.draw_char('[', Vec2::xy(tile.x * 2, tile.y));
+            pencil.draw_char(']', Vec2::xy(tile.x * 2 + 1, tile.y));
         }
 
         pencil.set_foreground(Color::Xterm(8));
         for y in 0..state.dimension.y + 3 {
-            for x in 0..state.dimension.x + 2 {
-                // let mut c: Option<char> = None;
-                // if y == 0 || x == 0 || y == state.dimension.y + 2 || x == state.dimension.x + 2 {
-                //     pencil.draw_char('■', Vec2::xy(x * 2 - 2, y - 1));
-                // }
-                if x == 0 || x == state.dimension.x + 1 {
+            for x in 0..state.dimension.x + 3 {
+                if x == 0 {
                     pencil.draw_char('│', Vec2::xy(x * 2 - 1, y - 1));
+                } else if x == state.dimension.x + 2 {
+                    pencil.draw_char('│', Vec2::xy(x * 2 - 2, y - 1));
                 } else if y == 0 || y == state.dimension.y + 2 {
                     pencil.draw_char('─', Vec2::xy(x * 2 - 2, y - 1));
                     pencil.draw_char('─', Vec2::xy(x * 2 - 1, y - 1));
-                    pencil.draw_char('─', Vec2::xy(x * 2, y - 1));
                 }
-                // if let Some(v) = c {
-                // }
             }
         }
 
