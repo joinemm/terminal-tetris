@@ -3,6 +3,7 @@ name: Build with Provenance
 on:
   workflow_dispatch:
   release:
+    types: [created]
 
 env:
   CARGO_TERM_COLOR: always
