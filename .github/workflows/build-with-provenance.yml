@@ -2,8 +2,10 @@ name: Build with Provenance
 
 on:
   workflow_dispatch:
-  release:
-    types: [created]
+  push:
+    tags:
+      - v**-provenance
+
 
 env:
   CARGO_TERM_COLOR: always
