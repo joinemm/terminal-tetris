@@ -236,18 +236,20 @@ impl Piece {
         arena_dimensions: &Vec2,
         do_offset: bool,
     ) {
-        let mut tilemap = [Vec2::zero(); 4];
         let direction = match clockwise {
             true => 1,
             false => -1,
         };
+
+        let rotation_matrix = match clockwise {
+            true => [Vec2::xy(0, -1), Vec2::xy(1, 0)],
+            false => [Vec2::xy(0, 1), Vec2::xy(-1, 0)],
+        };
+
         let new_rotation_index = modulo(self.rotation_index as i32 + direction, 4) as usize;
 
+        let mut tilemap = [Vec2::zero(); 4];
         for (i, tile) in self.get_tilemap().iter().enumerate() {
-            let rotation_matrix = match clockwise {
-                true => [Vec2::xy(0, -1), Vec2::xy(1, 0)],
-                false => [Vec2::xy(0, 1), Vec2::xy(-1, 0)],
-            };
             tilemap[i].x = (rotation_matrix[0].x * tile.x) + (rotation_matrix[1].x * tile.y);
             tilemap[i].y = (rotation_matrix[0].y * tile.x) + (rotation_matrix[1].y * tile.y);
         }
