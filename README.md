@@ -27,3 +27,7 @@ cargo build
 ```
 
 Or download the binary for your operating system from the releases tab.
+
+### Wayland
+
+Ruscii does not support Wayland. The only way that other packages have been able to get keystrokes on Wayland has been through kernel-level monitoring. If you are using a Wayland based window manager or desktop environment, running this in a terminal under XWayland will work.
