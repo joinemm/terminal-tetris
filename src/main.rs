@@ -34,122 +34,52 @@ impl PieceType {
             PieceType::O => Color::Xterm(15),
         }
     }
-    pub fn get_tiles(&self) -> Vec<Vec2> {
+    pub fn get_tiles(&self) -> [Vec2; 4] {
         match self {
             PieceType::J => {
-                vec![
-                    Vec2::xy(-1, -1),
-                    Vec2::xy(-1, 0),
-                    Vec2::xy(0, 0),
-                    Vec2::xy(1, 0),
-                ]
+                [Vec2::xy(-1, -1), Vec2::xy(-1, 0), Vec2::xy(0, 0), Vec2::xy(1, 0)]
             }
             PieceType::L => {
-                vec![
-                    Vec2::xy(1, -1),
-                    Vec2::xy(-1, 0),
-                    Vec2::xy(0, 0),
-                    Vec2::xy(1, 0),
-                ]
+                [Vec2::xy(1, -1), Vec2::xy(-1, 0), Vec2::xy(0, 0), Vec2::xy(1, 0)]
             }
             PieceType::S => {
-                vec![
-                    Vec2::xy(1, -1),
-                    Vec2::xy(0, -1),
-                    Vec2::xy(0, 0),
-                    Vec2::xy(-1, 0),
-                ]
+                [Vec2::xy(1, -1), Vec2::xy(0, -1), Vec2::xy(0, 0), Vec2::xy(-1, 0)]
             }
             PieceType::T => {
-                vec![
-                    Vec2::xy(-1, 0),
-                    Vec2::xy(0, -1),
-                    Vec2::xy(0, 0),
-                    Vec2::xy(1, 0),
-                ]
+                [Vec2::xy(-1, 0), Vec2::xy(0, -1), Vec2::xy(0, 0), Vec2::xy(1, 0)]
             }
             PieceType::Z => {
-                vec![
-                    Vec2::xy(1, 0),
-                    Vec2::xy(0, -1),
-                    Vec2::xy(0, 0),
-                    Vec2::xy(-1, -1),
-                ]
+                [Vec2::xy(1, 0), Vec2::xy(0, -1), Vec2::xy(0, 0), Vec2::xy(-1, -1)]
             }
             PieceType::I => {
-                vec![
-                    Vec2::xy(1, -1),
-                    Vec2::xy(0, -1),
-                    Vec2::xy(0, 0),
-                    Vec2::xy(-1, 0),
-                ]
+                [Vec2::xy(1, -1), Vec2::xy(0, -1), Vec2::xy(0, 0), Vec2::xy(-1, 0)]
             }
             PieceType::O => {
-                vec![
-                    Vec2::xy(-1, 0),
-                    Vec2::xy(0, 0),
-                    Vec2::xy(1, 0),
-                    Vec2::xy(2, 0),
-                ]
+                [Vec2::xy(-1, 0), Vec2::xy(0, 0), Vec2::xy(1, 0), Vec2::xy(2, 0)]
             }
         }
     }
-    pub fn offset_data(&self) -> Vec<Vec<Vec2>> {
+    pub fn offset_data(&self) -> Vec<[Vec2; 4]> {
         match self {
             PieceType::I => {
                 vec![
-                    vec![
-                        Vec2::zero(),
-                        Vec2::xy(-1, 0),
-                        Vec2::xy(-1, 1),
-                        Vec2::xy(0, 1),
-                    ],
-                    vec![
-                        Vec2::xy(-1, 0),
-                        Vec2::zero(),
-                        Vec2::xy(1, 1),
-                        Vec2::xy(0, 1),
-                    ],
-                    vec![
-                        Vec2::xy(2, 0),
-                        Vec2::zero(),
-                        Vec2::xy(-2, 1),
-                        Vec2::xy(0, 1),
-                    ],
-                    vec![
-                        Vec2::xy(-1, 0),
-                        Vec2::xy(0, 1),
-                        Vec2::xy(1, 0),
-                        Vec2::xy(0, -1),
-                    ],
-                    vec![
-                        Vec2::xy(2, 0),
-                        Vec2::xy(0, -2),
-                        Vec2::xy(-2, 0),
-                        Vec2::xy(0, 2),
-                    ],
+                    [Vec2::zero(), Vec2::xy(-1, 0), Vec2::xy(-1, 1), Vec2::xy(0, 1)],
+                    [Vec2::xy(-1, 0), Vec2::zero(), Vec2::xy(1, 1), Vec2::xy(0, 1)],
+                    [Vec2::xy(2, 0), Vec2::zero(), Vec2::xy(-2, 1), Vec2::xy(0, 1)],
+                    [Vec2::xy(-1, 0), Vec2::xy(0, 1), Vec2::xy(1, 0), Vec2::xy(0, -1)],
+                    [Vec2::xy(2, 0), Vec2::xy(0, -2), Vec2::xy(-2, 0), Vec2::xy(0, 2)],
                 ]
             }
             PieceType::O => {
-                vec![vec![
-                    Vec2::zero(),
-                    Vec2::xy(0, -1),
-                    Vec2::xy(-1, -1),
-                    Vec2::xy(-1, 0),
-                ]]
+                vec![[Vec2::zero(), Vec2::xy(0, -1), Vec2::xy(-1, -1), Vec2::xy(-1, 0)]]
             }
             _ => {
                 vec![
-                    vec![Vec2::zero(); 4],
-                    vec![Vec2::zero(), Vec2::xy(1, 0), Vec2::zero(), Vec2::xy(-1, 0)],
-                    vec![
-                        Vec2::zero(),
-                        Vec2::xy(1, -1),
-                        Vec2::zero(),
-                        Vec2::xy(-1, -1),
-                    ],
-                    vec![Vec2::zero(), Vec2::xy(0, 2), Vec2::zero(), Vec2::xy(0, 2)],
-                    vec![Vec2::zero(), Vec2::xy(1, 2), Vec2::zero(), Vec2::xy(-1, 2)],
+                    [Vec2::zero(); 4],
+                    [Vec2::zero(), Vec2::xy(1, 0), Vec2::zero(), Vec2::xy(-1, 0)],
+                    [Vec2::zero(), Vec2::xy(1, -1), Vec2::zero(), Vec2::xy(-1, -1)],
+                    [Vec2::zero(), Vec2::xy(0, 2), Vec2::zero(), Vec2::xy(0, 2)],
+                    [Vec2::zero(), Vec2::xy(1, 2), Vec2::zero(), Vec2::xy(-1, 2)],
                 ]
             }
         }
@@ -213,7 +143,7 @@ impl Tile {
 #[derive(Clone)]
 struct Piece {
     piece_type: PieceType,
-    tiles: Vec<Vec2>,
+    tiles: [Vec2; 4],
     location: Vec2,
     rotation_index: usize,
 }
@@ -221,11 +151,8 @@ struct Piece {
 impl Piece {
     pub fn new(location: Vec2) -> Self {
         let piece_type: PieceType = rand::random();
-        let tiles = piece_type
-            .get_tiles()
-            .iter()
-            .map(|&t| t + location)
-            .collect();
+        let mut tiles = piece_type.get_tiles().clone();
+        tiles.iter_mut().for_each(|t| *t += location);
         Self {
             piece_type,
             tiles,
@@ -241,16 +168,16 @@ impl Piece {
         }
     }
 
-    fn set_tiles(&mut self, tilemap: Vec<Vec2>) {
-        let tiles: Vec<Vec2> = tilemap.iter().map(|&t| t + self.location).collect();
-        self.tiles = tiles;
+    fn set_tiles(&mut self, tilemap: [Vec2; 4]) {
+        self.tiles
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, t)| *t = tilemap[i] + self.location);
     }
 
-    fn get_tilemap(&self) -> Vec<Vec2> {
-        let mut tilemap: Vec<Vec2> = Vec::new();
-        for tile in &self.tiles {
-            tilemap.push(*tile - self.location);
-        }
+    fn get_tilemap(&self) -> [Vec2; 4] {
+        let mut tilemap: [Vec2; 4] = self.tiles.clone();
+        tilemap.iter_mut().for_each(|t| *t -= self.location);
         tilemap
     }
 
@@ -309,21 +236,20 @@ impl Piece {
         arena_dimensions: &Vec2,
         do_offset: bool,
     ) {
-        let mut tilemap = Vec::new();
+        let mut tilemap = [Vec2::zero(); 4];
         let direction = match clockwise {
             true => 1,
             false => -1,
         };
         let new_rotation_index = modulo(self.rotation_index as i32 + direction, 4) as usize;
 
-        for tile in self.get_tilemap() {
+        for (i, tile) in self.get_tilemap().iter().enumerate() {
             let rotation_matrix = match clockwise {
-                true => vec![Vec2::xy(0, -1), Vec2::xy(1, 0)],
-                false => vec![Vec2::xy(0, 1), Vec2::xy(-1, 0)],
+                true => [Vec2::xy(0, -1), Vec2::xy(1, 0)],
+                false => [Vec2::xy(0, 1), Vec2::xy(-1, 0)],
             };
-            let new_x = (rotation_matrix[0].x * tile.x) + (rotation_matrix[1].x * tile.y);
-            let new_y = (rotation_matrix[0].y * tile.x) + (rotation_matrix[1].y * tile.y);
-            tilemap.push(Vec2::xy(new_x, new_y));
+            tilemap[i].x = (rotation_matrix[0].x * tile.x) + (rotation_matrix[1].x * tile.y);
+            tilemap[i].y = (rotation_matrix[0].y * tile.x) + (rotation_matrix[1].y * tile.y);
         }
 
         self.set_tiles(tilemap);
@@ -438,7 +364,7 @@ impl GameState {
 }
 
 fn main() {
-    let controls_text: Vec<&str> = vec![
+    let controls_text: [&str; 5] = [
         "⇦ ⇨ : move piece",
         "X, ⇧ : rotate clockwise",
         "Z : rotate counterclockwise",
