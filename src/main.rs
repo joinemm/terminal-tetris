@@ -57,10 +57,10 @@ impl PieceType {
                 [Vec2::xy(1, 0), Vec2::xy(0, -1), Vec2::xy(0, 0), Vec2::xy(-1, -1)]
             }
             PieceType::I => {
-                [Vec2::xy(1, -1), Vec2::xy(0, -1), Vec2::xy(0, 0), Vec2::xy(-1, 0)]
+                [Vec2::xy(-1, 0), Vec2::xy(0, 0), Vec2::xy(1, 0), Vec2::xy(2, 0)]
             }
             PieceType::O => {
-                [Vec2::xy(-1, 0), Vec2::xy(0, 0), Vec2::xy(1, 0), Vec2::xy(2, 0)]
+                [Vec2::xy(1, -1), Vec2::xy(0, -1), Vec2::xy(0, 0), Vec2::xy(1, 0)]
             }
         }
     }
@@ -222,12 +222,10 @@ impl Piece {
             offset_1 = piece_offset[self.rotation_index];
             offset_2 = piece_offset[new_rotation_index];
             end_offset = offset_1 - offset_2;
-            if self.can_move(end_offset, blocking_tiles, arena_dimensions) {
-                move_possible = true;
-            }
+            move_possible = true;
         }
 
-        if let PieceOffset::Other(dataset) = offset_data_wrapped {
+        else if let PieceOffset::Other(dataset) = offset_data_wrapped {
             for piece_offset in dataset.iter() {
                 offset_1 = piece_offset[self.rotation_index];
                 offset_2 = piece_offset[new_rotation_index];
@@ -259,8 +257,8 @@ impl Piece {
         };
 
         let rotation_matrix = match clockwise {
-            true => [Vec2::xy(0, -1), Vec2::xy(1, 0)],
-            false => [Vec2::xy(0, 1), Vec2::xy(-1, 0)],
+            true => [Vec2::xy(0, 1), Vec2::xy(-1, 0)],
+            false => [Vec2::xy(0, -1), Vec2::xy(1, 0)],
         };
 
         let new_rotation_index = modulo(self.rotation_index as i32 + direction, 4) as usize;
