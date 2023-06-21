@@ -22,6 +22,11 @@ enum PieceType {
     O,
 }
 
+enum PieceOffset {
+    O([Vec2; 4]),
+    Other([[Vec2; 4]; 5]),
+}
+
 impl PieceType {
     pub fn get_color(&self) -> Color {
         match self {
@@ -59,29 +64,31 @@ impl PieceType {
             }
         }
     }
-    pub fn offset_data(&self) -> Vec<[Vec2; 4]> {
+    pub fn offset_data(&self) -> PieceOffset {
         match self {
             PieceType::I => {
-                vec![
+                PieceOffset::Other([
                     [Vec2::zero(), Vec2::xy(-1, 0), Vec2::xy(-1, 1), Vec2::xy(0, 1)],
                     [Vec2::xy(-1, 0), Vec2::zero(), Vec2::xy(1, 1), Vec2::xy(0, 1)],
                     [Vec2::xy(2, 0), Vec2::zero(), Vec2::xy(-2, 1), Vec2::xy(0, 1)],
                     [Vec2::xy(-1, 0), Vec2::xy(0, 1), Vec2::xy(1, 0), Vec2::xy(0, -1)],
                     [Vec2::xy(2, 0), Vec2::xy(0, -2), Vec2::xy(-2, 0), Vec2::xy(0, 2)],
-                ]
-            }
+                ])
+            },
             PieceType::O => {
-                vec![[Vec2::zero(), Vec2::xy(0, -1), Vec2::xy(-1, -1), Vec2::xy(-1, 0)]]
-            }
+                PieceOffset::O(
+                    [Vec2::zero(), Vec2::xy(0, -1), Vec2::xy(-1, -1), Vec2::xy(-1, 0)]
+                )
+            },
             _ => {
-                vec![
+                PieceOffset::Other([
                     [Vec2::zero(); 4],
                     [Vec2::zero(), Vec2::xy(1, 0), Vec2::zero(), Vec2::xy(-1, 0)],
                     [Vec2::zero(), Vec2::xy(1, -1), Vec2::zero(), Vec2::xy(-1, -1)],
                     [Vec2::zero(), Vec2::xy(0, 2), Vec2::zero(), Vec2::xy(0, 2)],
                     [Vec2::zero(), Vec2::xy(1, 2), Vec2::zero(), Vec2::xy(-1, 2)],
-                ]
-            }
+                ])
+            },
         }
     }
 }
@@ -209,16 +216,26 @@ impl Piece {
         let mut offset_2: Vec2;
         let mut end_offset: Vec2 = Vec2::zero();
         let mut move_possible: bool = false;
+        let offset_data_wrapped = self.piece_type.offset_data();
 
-        let dataset = self.piece_type.offset_data();
-
-        for piece_offset in dataset {
+        if let PieceOffset::O(piece_offset) = offset_data_wrapped {
             offset_1 = piece_offset[self.rotation_index];
             offset_2 = piece_offset[new_rotation_index];
             end_offset = offset_1 - offset_2;
             if self.can_move(end_offset, blocking_tiles, arena_dimensions) {
                 move_possible = true;
-                break;
+            }
+        }
+
+        if let PieceOffset::Other(dataset) = offset_data_wrapped {
+            for piece_offset in dataset.iter() {
+                offset_1 = piece_offset[self.rotation_index];
+                offset_2 = piece_offset[new_rotation_index];
+                end_offset = offset_1 - offset_2;
+                if self.can_move(end_offset, blocking_tiles, arena_dimensions) {
+                    move_possible = true;
+                    break;
+                }
             }
         }
 
