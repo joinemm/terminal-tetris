@@ -188,16 +188,14 @@ impl Piece {
     fn can_move(
         &self, movement: Vec2, blocking_tiles: &[Tile], arena_dimensions: &Vec2) -> bool {
         for tile in &self.tiles {
-            let future_tile = Tile::new(*tile + movement);
-            if blocking_tiles.contains(&future_tile)
-                || future_tile.x < 0
-                || future_tile.x > arena_dimensions.x
-                || future_tile.y > arena_dimensions.y
-            {
-                return false;
+            match Tile::new(*tile + movement) {
+                t if blocking_tiles.contains(&t) => { return false; },
+                t if t.x < 0 => { return false; },
+                t if t.x > arena_dimensions.x => { return false; },
+                t if t.y > arena_dimensions.y => { return false; },
+                _ => {()},
             }
         }
-
         true
     }
 
