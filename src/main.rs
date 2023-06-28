@@ -1,15 +1,9 @@
-use rand::{
-    distributions::{Distribution, Standard},
-    Rng,
-};
+use rand::{ distributions::{Distribution, Standard}, Rng };
 use ruscii::drawing::Pencil;
 use ruscii::keyboard::{Key, KeyEvent};
 use ruscii::spatial::Vec2;
 use ruscii::terminal::{Color, Window};
-use ruscii::{
-    app::{App, Config, State},
-    terminal::VisualElement,
-};
+use ruscii::{ app::{App, Config, State}, terminal::VisualElement };
 
 #[derive(Clone)]
 enum PieceType {
@@ -74,12 +68,14 @@ impl PieceType {
                     [Vec2::xy(-1, 0), Vec2::xy(0, 1), Vec2::xy(1, 0), Vec2::xy(0, -1)],
                     [Vec2::xy(2, 0), Vec2::xy(0, -2), Vec2::xy(-2, 0), Vec2::xy(0, 2)],
                 ])
-            },
+            }
+
             PieceType::O => {
                 PieceOffset::O(
                     [Vec2::zero(), Vec2::xy(0, -1), Vec2::xy(-1, -1), Vec2::xy(-1, 0)]
                 )
-            },
+            }
+
             _ => {
                 PieceOffset::Other([
                     [Vec2::zero(); 4],
@@ -88,7 +84,7 @@ impl PieceType {
                     [Vec2::zero(), Vec2::xy(0, 2), Vec2::zero(), Vec2::xy(0, 2)],
                     [Vec2::zero(), Vec2::xy(1, 2), Vec2::zero(), Vec2::xy(-1, 2)],
                 ])
-            },
+            }
         }
     }
 }
@@ -123,11 +119,13 @@ impl std::ops::Deref for Tile {
         &self.location
     }
 }
+
 impl std::ops::DerefMut for Tile {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.location
     }
 }
+
 impl PartialEq for Tile {
     fn eq(&self, other: &Self) -> bool {
         self.location == other.location
@@ -160,6 +158,7 @@ impl Piece {
         let piece_type: PieceType = rand::random();
         let mut tiles = piece_type.get_tiles().clone();
         tiles.iter_mut().for_each(|t| *t += location);
+
         Self {
             piece_type,
             tiles,
@@ -188,7 +187,8 @@ impl Piece {
         tilemap
     }
 
-    fn can_move(&self, movement: Vec2, blocking_tiles: &[Tile], arena_dimensions: &Vec2) -> bool {
+    fn can_move(
+        &self, movement: Vec2, blocking_tiles: &[Tile], arena_dimensions: &Vec2) -> bool {
         let mut can_move = true;
 
         for tile in &self.tiles {
@@ -212,36 +212,25 @@ impl Piece {
         blocking_tiles: &[Tile],
         arena_dimensions: &Vec2,
     ) -> bool {
-        let mut offset_1: Vec2;
-        let mut offset_2: Vec2;
-        let mut end_offset: Vec2 = Vec2::zero();
-        let mut move_possible: bool = false;
-        let offset_data_wrapped = self.piece_type.offset_data();
+        let mut offset: Vec2;
+        match self.piece_type.offset_data() {
+            PieceOffset::O(offsets) => {
+                offset = offsets[self.rotation_index] - offsets[new_rotation_index];
+                self.move_piece(offset);
+                true
+            }
 
-        if let PieceOffset::O(piece_offset) = offset_data_wrapped {
-            offset_1 = piece_offset[self.rotation_index];
-            offset_2 = piece_offset[new_rotation_index];
-            end_offset = offset_1 - offset_2;
-            move_possible = true;
-        }
-
-        else if let PieceOffset::Other(dataset) = offset_data_wrapped {
-            for piece_offset in dataset.iter() {
-                offset_1 = piece_offset[self.rotation_index];
-                offset_2 = piece_offset[new_rotation_index];
-                end_offset = offset_1 - offset_2;
-                if self.can_move(end_offset, blocking_tiles, arena_dimensions) {
-                    move_possible = true;
-                    break;
+            PieceOffset::Other(offsets_table) => {
+                for offsets in offsets_table.iter() {
+                    offset = offsets[self.rotation_index] - offsets[new_rotation_index];
+                    if self.can_move(offset, blocking_tiles, arena_dimensions) {
+                        self.move_piece(offset);
+                        return true;
+                    }
                 }
+                false
             }
         }
-
-        if move_possible {
-            self.move_piece(end_offset);
-        }
-
-        move_possible
     }
 
     pub fn rotate(
@@ -261,19 +250,24 @@ impl Piece {
             false => [Vec2::xy(0, -1), Vec2::xy(1, 0)],
         };
 
-        let new_rotation_index = modulo(self.rotation_index as i32 + direction, 4) as usize;
+        let new_rotation_index = modulo(
+            self.rotation_index as i32 + direction, 4) as usize;
 
         let mut tilemap = [Vec2::zero(); 4];
         for (i, tile) in self.get_tilemap().iter().enumerate() {
-            tilemap[i].x = (rotation_matrix[0].x * tile.x) + (rotation_matrix[1].x * tile.y);
-            tilemap[i].y = (rotation_matrix[0].y * tile.x) + (rotation_matrix[1].y * tile.y);
+            tilemap[i].x = (rotation_matrix[0].x * tile.x)
+                + (rotation_matrix[1].x * tile.y);
+            tilemap[i].y = (rotation_matrix[0].y * tile.x)
+                + (rotation_matrix[1].y * tile.y);
         }
 
         self.set_tiles(tilemap);
         if !do_offset {
             return;
         }
-        let can_rotate = self.offset(new_rotation_index, blocking_tiles, arena_dimensions);
+
+        let can_rotate = self.offset(
+            new_rotation_index, blocking_tiles, arena_dimensions);
         if !can_rotate {
             self.rotate(!clockwise, blocking_tiles, arena_dimensions, false)
         } else {
@@ -296,7 +290,7 @@ impl GameState {
     pub fn new(dimension: Vec2) -> GameState {
         GameState {
             dimension,
-            tiles: Vec::new(),
+            tiles: Vec::with_capacity(dimension.x as usize * dimension.y as usize),
             last_update: 0,
             last_input: (0, 0),
             drop_speed: 20,
@@ -308,9 +302,7 @@ impl GameState {
     pub fn update(&mut self, frame: usize) {
         if self.last_update + self.drop_speed < frame {
             self.last_update = frame;
-            if self
-                .current_piece
-                .can_move(Vec2::xy(0, 1), &self.tiles, &self.dimension)
+            if self.current_piece.can_move(Vec2::xy(0, 1), &self.tiles, &self.dimension)
             {
                 self.current_piece.move_piece(Vec2::xy(0, 1));
             } else {
@@ -327,8 +319,7 @@ impl GameState {
     }
 
     pub fn rotate_piece(&mut self, clockwise: bool) {
-        self.current_piece
-            .rotate(clockwise, &self.tiles, &self.dimension, true);
+        self.current_piece.rotate(clockwise, &self.tiles, &self.dimension, true);
     }
 
     pub fn spawn_piece(&mut self) {
@@ -339,9 +330,8 @@ impl GameState {
         if self.last_input.0 + 5 < frame || self.last_input.1 != displacement {
             self.last_input = (frame, displacement);
             let movement = Vec2::xy(displacement, 0);
-            if self
-                .current_piece
-                .can_move(movement, &self.tiles, &self.dimension)
+
+            if self.current_piece.can_move(movement, &self.tiles, &self.dimension)
             {
                 self.current_piece.move_piece(movement);
             }
@@ -363,10 +353,11 @@ impl GameState {
 
     pub fn clear_rows(&mut self) {
         for y in 0..self.dimension.y + 1 {
-            let row: Vec<Vec2> = (0..self.dimension.x + 1).map(|x| Vec2::xy(x, y)).collect();
-            if row
-                .iter()
-                .all(|item| self.tiles.contains(&Tile::new(*item)))
+            let row: Vec<Vec2> = (0..self.dimension.x + 1)
+                .map(|x| Vec2::xy(x, y))
+                .collect();
+
+            if row.iter().all(|item| self.tiles.contains(&Tile::new(*item)))
             {
                 self.score += 1;
                 self.tiles.retain(|t| t.y != y);
@@ -401,9 +392,13 @@ fn main() {
 
         for key_event in app_state.keyboard().last_key_events() {
             match key_event {
-                KeyEvent::Pressed(Key::Esc) | KeyEvent::Pressed(Key::Q) => app_state.stop(),
+                KeyEvent::Pressed(Key::Esc) | KeyEvent::Pressed(Key::Q) => {
+                    app_state.stop();
+                }
                 KeyEvent::Pressed(Key::Z) => state.rotate_piece(false),
-                KeyEvent::Pressed(Key::X) | KeyEvent::Pressed(Key::Up) => state.rotate_piece(true),
+                KeyEvent::Pressed(Key::X) | KeyEvent::Pressed(Key::Up) => {
+                    state.rotate_piece(true);
+                }
                 KeyEvent::Released(Key::Left) => {
                     state.last_input = (0, -1);
                 }
@@ -427,7 +422,6 @@ fn main() {
         }
 
         state.update(app_state.step());
-
         let win_size = window.size();
         let mut pencil = Pencil::new(window.canvas_mut());
         let origin = (win_size - Vec2::xy(state.dimension.x * 2, state.dimension.y)) / 2;
@@ -441,14 +435,15 @@ fn main() {
         }
 
         state.clear_rows();
-
         pencil.set_foreground(state.current_piece.piece_type.get_color());
+
         for pos in &state.current_piece.tiles {
             if pos.y >= 0 {
                 pencil.draw_char('[', Vec2::xy(pos.x * 2, pos.y));
                 pencil.draw_char(']', Vec2::xy(pos.x * 2 + 1, pos.y));
             }
         }
+
         for tile in &state.tiles {
             pencil.set_foreground(tile.color);
             pencil.draw_char('[', Vec2::xy(tile.x * 2, tile.y));
@@ -456,6 +451,7 @@ fn main() {
         }
 
         pencil.set_foreground(Color::Xterm(8));
+
         for y in 0..state.dimension.y + 3 {
             for x in 0..state.dimension.x + 3 {
                 if x == 0 {
@@ -472,6 +468,7 @@ fn main() {
         pencil.set_foreground(Color::Xterm(15));
         pencil.set_origin(Vec2::xy(origin.x + state.dimension.x * 2 + 6, origin.y));
         pencil.draw_text(&format!("score: {}", state.score), Vec2::xy(0, 0));
+
         for (i, ctrl) in controls_text.iter().enumerate() {
             pencil.draw_text(ctrl, Vec2::xy(0, 2 + i));
         }
