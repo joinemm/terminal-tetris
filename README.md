@@ -31,3 +31,21 @@ Or download the binary for your operating system from the releases tab.
 ### Wayland
 
 Ruscii does not support Wayland. The only way that other packages have been able to get keystrokes on Wayland has been through kernel-level monitoring. If you are using a Wayland based window manager or desktop environment, running this in a terminal under XWayland will work.
+
+### Known Bugs
+
+- Rotations of 'O' piece cause the piece to jump
+- Next piece view missing
+- Scoring formula incorrect
+- Levels not implemented
+
+### Roadmap
+
+- [ ] Fix 'O' rotations
+- [ ] Fix scoring formula
+- [ ] Implement levels
+- [ ] Implement next piece view
+- [ ] Add dot file for choosing which feature set is wanted
+- [ ] Implement [Tetris Random Generator](https://tetris.wiki/Random_Generator), make default
+- [ ] Implement hold
+- [ ] Add controls options to dot file
