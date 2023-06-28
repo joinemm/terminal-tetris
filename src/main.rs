@@ -189,8 +189,6 @@ impl Piece {
 
     fn can_move(
         &self, movement: Vec2, blocking_tiles: &[Tile], arena_dimensions: &Vec2) -> bool {
-        let mut can_move = true;
-
         for tile in &self.tiles {
             let future_tile = Tile::new(*tile + movement);
             if blocking_tiles.contains(&future_tile)
@@ -198,12 +196,11 @@ impl Piece {
                 || future_tile.x > arena_dimensions.x
                 || future_tile.y > arena_dimensions.y
             {
-                can_move = false;
-                break;
+                return false;
             }
         }
 
-        can_move
+        true
     }
 
     fn offset(
@@ -253,25 +250,25 @@ impl Piece {
         let new_rotation_index = modulo(
             self.rotation_index as i32 + direction, 4) as usize;
 
-        let mut tilemap = [Vec2::zero(); 4];
-        for (i, tile) in self.get_tilemap().iter().enumerate() {
-            tilemap[i].x = (rotation_matrix[0].x * tile.x)
-                + (rotation_matrix[1].x * tile.y);
-            tilemap[i].y = (rotation_matrix[0].y * tile.x)
-                + (rotation_matrix[1].y * tile.y);
-        }
+        let tilemap = self.get_tilemap();
+        let new_tilemap: [Vec2; 4] = core::array::from_fn(
+            |i| Vec2::xy(
+                (rotation_matrix[0].x * tilemap[i].x)
+                    + (rotation_matrix[1].x * tilemap[i].y),
+                (rotation_matrix[0].y * tilemap[i].x)
+                    + (rotation_matrix[1].y * tilemap[i].y),
+            )
+        );
 
-        self.set_tiles(tilemap);
+        self.set_tiles(new_tilemap);
+
         if !do_offset {
             return;
         }
 
-        let can_rotate = self.offset(
-            new_rotation_index, blocking_tiles, arena_dimensions);
-        if !can_rotate {
-            self.rotate(!clockwise, blocking_tiles, arena_dimensions, false)
-        } else {
-            self.rotation_index = new_rotation_index;
+        match self.offset(new_rotation_index, blocking_tiles, arena_dimensions) {
+            true => { self.rotation_index = new_rotation_index; }
+            false => self.rotate(!clockwise, blocking_tiles, arena_dimensions, false)
         }
     }
 }
