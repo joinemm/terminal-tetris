@@ -105,10 +105,6 @@ impl Distribution<PieceType> for Standard {
     }
 }
 
-fn modulo(x: i32, m: i32) -> i32 {
-    (x % m + m) % m
-}
-
 #[derive(Clone, Eq)]
 struct Tile {
     color: Color,
@@ -252,8 +248,7 @@ impl Piece {
             false => [Vec2::xy(0, -1), Vec2::xy(1, 0)],
         };
 
-        let new_rotation_index = modulo(
-            self.rotation_index as i32 + direction, 4) as usize;
+        let new_rotation_index = ((self.rotation_index as i32 + direction) % 4) as usize;
 
         let tilemap = self.get_tilemap();
         let new_tilemap: [Vec2; 4] = core::array::from_fn(
