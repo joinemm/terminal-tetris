@@ -5,15 +5,9 @@ use ruscii::spatial::Vec2;
 use ruscii::terminal::{Color, Window};
 use ruscii::{ app::{App, Config, State}, terminal::VisualElement };
 
-enum TetriminoOffsets {
-    O([Vec2; 4]),
-    Other([[Vec2; 4]; 5]),
-}
-
-struct TetriminoDefinition {
-    color: Color,
-    tiles: [Vec2; 4],
-    offsets: TetriminoOffsets,
+enum TetriminoWallKicks {
+    O(Vec2),
+    Other([Vec2; 5]),
 }
 
 enum TetriminoType {
@@ -26,66 +20,83 @@ enum TetriminoType {
     O,
 }
 
-const I_OFFSETS_TABLE: TetriminoOffsets = TetriminoOffsets::Other([
+struct TetriminoPrimitive {
+    tetrimino_type: TetriminoType,
+    color: Color,
+    tiles: [Vec2; 4],
+}
+
+impl TetriminoPrimitive {
+    pub fn get_wall_kicks(&self, from: usize, to: usize) -> TetriminoWallKicks {
+        match self.tetrimino_type {
+            TetriminoType::O => TetriminoWallKicks::O(O_OFFSETS[from] - O_OFFSETS[to]),
+            TetriminoType::I => TetriminoWallKicks::Other(core::array::from_fn(
+                |i| I_OFFSETS_TABLE[i][from] - I_OFFSETS_TABLE[i][to])),
+            _ => TetriminoWallKicks::Other(core::array::from_fn(
+                |i| OTHER_OFFSETS_TABLE[i][from] - OTHER_OFFSETS_TABLE[i][to])),
+        }
+    }
+}
+
+const I_OFFSETS_TABLE: [[Vec2; 4]; 5] = [
     [Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}, Vec2 {x: -1, y: 1}, Vec2 {x: 0, y: 1}],
     [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 1}, Vec2 {x: 0, y: 1}],
     [Vec2 {x: 2, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: -2, y: 1}, Vec2 {x: 0, y: 1}],
     [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 1}, Vec2 {x: 1, y: 0}, Vec2 {x: 0, y: -1}],
     [Vec2 {x: 2, y: 0}, Vec2 {x: 0, y: -2}, Vec2 {x: -2, y: 0}, Vec2 {x: 0, y: 2}],
-]);
+];
 
-const O_OFFSETS: TetriminoOffsets = TetriminoOffsets::O(
-    [Vec2 {x: 0, y: 0}, Vec2 {x: 0, y: -1}, Vec2 {x: -1, y: -1}, Vec2 {x: -1, y: 0}]
-);
+const O_OFFSETS: [Vec2; 4] = [
+    Vec2 {x: 0, y: 0}, Vec2 {x: 0, y: -1}, Vec2 {x: -1, y: -1}, Vec2 {x: -1, y: 0}];
 
-const OTHER_OFFSETS_TABLE: TetriminoOffsets = TetriminoOffsets::Other([
+const OTHER_OFFSETS_TABLE: [[Vec2; 4]; 5] = [
     [Vec2 {x: 0, y: 0}; 4],
     [Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}],
     [Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: -1}],
     [Vec2 {x: 0, y: 0}, Vec2 {x: 0, y: 2}, Vec2 {x: 0, y: 0}, Vec2 {x: 0, y: 2}],
     [Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 2}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 2}],
-]);
+];
 
-const J: TetriminoDefinition = TetriminoDefinition {
+const J: TetriminoPrimitive = TetriminoPrimitive {
+    tetrimino_type: TetriminoType::J,
     color: Color::Xterm(9),
     tiles: [Vec2 {x: -1, y: -1}, Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
-    offsets: OTHER_OFFSETS_TABLE,
 };
 
-const L: TetriminoDefinition = TetriminoDefinition {
+const L: TetriminoPrimitive = TetriminoPrimitive {
+    tetrimino_type: TetriminoType::L,
     color: Color::Xterm(10),
     tiles: [Vec2 {x: 1, y: -1}, Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
-    offsets: OTHER_OFFSETS_TABLE,
 };
 
-const S: TetriminoDefinition = TetriminoDefinition {
+const S: TetriminoPrimitive = TetriminoPrimitive {
+    tetrimino_type: TetriminoType::S,
     color: Color::Xterm(11),
     tiles: [Vec2 {x: 1, y: -1}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}],
-    offsets: OTHER_OFFSETS_TABLE,
 };
 
-const T: TetriminoDefinition = TetriminoDefinition {
+const T: TetriminoPrimitive = TetriminoPrimitive {
+    tetrimino_type: TetriminoType::T,
     color: Color::Xterm(12),
     tiles: [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
-    offsets: OTHER_OFFSETS_TABLE,
 };
 
-const Z: TetriminoDefinition = TetriminoDefinition {
+const Z: TetriminoPrimitive = TetriminoPrimitive {
+    tetrimino_type: TetriminoType::Z,
     color: Color::Xterm(13),
     tiles: [Vec2 {x: 1, y: 0}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: -1}],
-    offsets: OTHER_OFFSETS_TABLE,
 };
 
-const I: TetriminoDefinition = TetriminoDefinition {
+const I: TetriminoPrimitive = TetriminoPrimitive {
+    tetrimino_type: TetriminoType::I,
     color: Color::Xterm(14),
     tiles: [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}, Vec2 {x: 2, y: 0}],
-    offsets: I_OFFSETS_TABLE,
 };
 
-const O: TetriminoDefinition = TetriminoDefinition {
+const O: TetriminoPrimitive = TetriminoPrimitive {
+    tetrimino_type: TetriminoType::O,
     color: Color::Xterm(15),
     tiles: [Vec2 {x: 1, y: -1}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
-    offsets: O_OFFSETS,
 };
 
 impl Distribution<TetriminoType> for Standard {
@@ -142,7 +153,7 @@ impl Tile {
 
 #[derive(Clone)]
 struct Tetrimino<'a> {
-    definition: &'a TetriminoDefinition,
+    primitive: &'a TetriminoPrimitive,
     tiles: [Vec2; 4],
     location: Vec2,
     rotation_index: usize,
@@ -150,7 +161,7 @@ struct Tetrimino<'a> {
 
 impl Tetrimino<'_> {
     pub fn new(location: Vec2) -> Self {
-        let definition = match rand::random::<TetriminoType>() {
+        let primitive = match rand::random::<TetriminoType>() {
             TetriminoType::J => &J,
             TetriminoType::L => &L,
             TetriminoType::S => &S,
@@ -159,11 +170,12 @@ impl Tetrimino<'_> {
             TetriminoType::I => &I,
             TetriminoType::O => &O,
         };
-        let mut tiles = definition.tiles.clone();
+
+        let mut tiles = primitive.tiles.clone();
         tiles.iter_mut().for_each(|t| *t += location);
 
         Self {
-            definition,
+            primitive,
             tiles,
             location,
             rotation_index: 0,
@@ -204,29 +216,25 @@ impl Tetrimino<'_> {
         true
     }
 
-    fn offset(
+    fn wall_kick(
         &mut self,
         new_rotation_index: usize,
         blocking_tiles: &[Tile],
         arena_dimensions: &Vec2,
     ) -> bool {
-        let mut offset: Vec2;
-        match self.definition.offsets {
-            TetriminoOffsets::O(offsets) => {
-                offset = offsets[self.rotation_index] - offsets[new_rotation_index];
-                self.move_self(offset);
+        match self.primitive.get_wall_kicks(self.rotation_index, new_rotation_index) {
+            TetriminoWallKicks::O(wall_kick) => {
+                self.move_self(wall_kick);
                 true
             }
 
-            TetriminoOffsets::Other(offsets_table) => {
-                for offsets in offsets_table.iter() {
-                    offset = offsets[self.rotation_index] - offsets[new_rotation_index];
-
-                    if !self.can_move(offset, blocking_tiles, arena_dimensions) {
+            TetriminoWallKicks::Other(wall_kicks) => {
+                for wall_kick in wall_kicks.iter() {
+                    if !self.can_move(*wall_kick, blocking_tiles, arena_dimensions) {
                         continue;
                     }
 
-                    self.move_self(offset);
+                    self.move_self(*wall_kick);
                     return true;
                 }
                 false
@@ -239,7 +247,7 @@ impl Tetrimino<'_> {
         clockwise: bool,
         blocking_tiles: &Vec<Tile>,
         arena_dimensions: &Vec2,
-        do_offset: bool,
+        kick: bool,
     ) {
         let direction = match clockwise {
             true => 1,
@@ -252,8 +260,8 @@ impl Tetrimino<'_> {
         };
 
         let new_rotation_index = ((self.rotation_index as i32 + direction) % 4) as usize;
-
         let tilemap = self.get_tilemap();
+
         let new_tilemap: [Vec2; 4] = core::array::from_fn(
             |i| Vec2::xy(
                 (rotation_matrix[0].x * tilemap[i].x)
@@ -265,11 +273,11 @@ impl Tetrimino<'_> {
 
         self.set_tiles(new_tilemap);
 
-        if !do_offset {
+        if !kick {
             return;
         }
 
-        match self.offset(new_rotation_index, blocking_tiles, arena_dimensions) {
+        match self.wall_kick(new_rotation_index, blocking_tiles, arena_dimensions) {
             true => { self.rotation_index = new_rotation_index; }
             false => self.rotate(!clockwise, blocking_tiles, arena_dimensions, false)
         }
@@ -315,8 +323,7 @@ impl GameState<'_> {
                 
         // make piece part of current tile set and spawn a new piece
         for tile in &self.current_tetrimino.tiles {
-            self.tiles.push(
-                Tile::with_color(*tile, self.current_tetrimino.definition.color));
+            self.tiles.push(Tile::with_color(*tile, self.current_tetrimino.primitive.color));
             
             if tile.y >= 0 {
                 continue;
@@ -443,7 +450,7 @@ fn main() {
         }
 
         state.clear_rows();
-        pencil.set_foreground(state.current_tetrimino.definition.color);
+        pencil.set_foreground(state.current_tetrimino.primitive.color);
 
         for pos in &state.current_tetrimino.tiles {
             if pos.y < 0 {
