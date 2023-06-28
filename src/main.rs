@@ -33,6 +33,7 @@ impl PieceType {
             PieceType::O => Color::Xterm(15),
         }
     }
+
     pub fn get_tiles(&self) -> [Vec2; 4] {
         match self {
             PieceType::J => {
@@ -58,6 +59,7 @@ impl PieceType {
             }
         }
     }
+
     pub fn offset_data(&self) -> PieceOffset {
         match self {
             PieceType::I => {
@@ -220,10 +222,13 @@ impl Piece {
             PieceOffset::Other(offsets_table) => {
                 for offsets in offsets_table.iter() {
                     offset = offsets[self.rotation_index] - offsets[new_rotation_index];
-                    if self.can_move(offset, blocking_tiles, arena_dimensions) {
-                        self.move_piece(offset);
-                        return true;
+
+                    if !self.can_move(offset, blocking_tiles, arena_dimensions) {
+                        continue;
                     }
+
+                    self.move_piece(offset);
+                    return true;
                 }
                 false
             }
@@ -281,6 +286,7 @@ struct GameState {
     pub last_update: usize,
     pub last_input: (usize, i32), // frame, direction
     pub drop_speed: usize,
+    pub hit_ceiling: bool,
 }
 
 impl GameState {
@@ -293,26 +299,35 @@ impl GameState {
             drop_speed: 20,
             score: 0,
             current_piece: Piece::new(Vec2::xy(dimension.x / 2, 0)),
+            hit_ceiling: false,
         }
     }
 
     pub fn update(&mut self, frame: usize) {
-        if self.last_update + self.drop_speed < frame {
-            self.last_update = frame;
-            if self.current_piece.can_move(Vec2::xy(0, 1), &self.tiles, &self.dimension)
-            {
-                self.current_piece.move_piece(Vec2::xy(0, 1));
-            } else {
-                // make piece part of current tile set and spawn a new piece
-                for tile in &self.current_piece.tiles {
-                    self.tiles.push(Tile::with_color(
-                        *tile,
-                        self.current_piece.piece_type.get_color(),
-                    ))
-                }
-                self.spawn_piece();
-            }
+        if self.last_update + self.drop_speed >= frame {
+            return;
         }
+            
+        self.last_update = frame;
+        
+        if self.current_piece.can_move(Vec2::xy(0, 1), &self.tiles, &self.dimension) {
+            self.current_piece.move_piece(Vec2::xy(0, 1));
+            return;
+        }
+                
+        // make piece part of current tile set and spawn a new piece
+        for tile in &self.current_piece.tiles {
+            self.tiles.push(
+                Tile::with_color(*tile, self.current_piece.piece_type.get_color()));
+            
+            if tile.y >= 0 {
+                continue;
+            }
+
+            self.hit_ceiling = true;
+        }
+
+        self.spawn_piece();
     }
 
     pub fn rotate_piece(&mut self, clockwise: bool) {
@@ -324,28 +339,22 @@ impl GameState {
     }
 
     pub fn tile_move_x(&mut self, displacement: i32, frame: usize) {
-        if self.last_input.0 + 5 < frame || self.last_input.1 != displacement {
-            self.last_input = (frame, displacement);
-            let movement = Vec2::xy(displacement, 0);
-
-            if self.current_piece.can_move(movement, &self.tiles, &self.dimension)
-            {
-                self.current_piece.move_piece(movement);
-            }
+        if self.last_input.0 + 5 >= frame && self.last_input.1 == displacement {
+            return;
         }
+
+        self.last_input = (frame, displacement);
+        let movement = Vec2::xy(displacement, 0);
+
+        if !self.current_piece.can_move(movement, &self.tiles, &self.dimension) {
+            return;
+        }
+
+        self.current_piece.move_piece(movement);
     }
 
     pub fn set_speed(&mut self, speed: usize) {
         self.drop_speed = speed;
-    }
-
-    pub fn hit_ceiling(&mut self) -> bool {
-        for tile in &self.tiles {
-            if tile.y < 0 {
-                return true;
-            }
-        }
-        false
     }
 
     pub fn clear_rows(&mut self) {
@@ -354,15 +363,19 @@ impl GameState {
                 .map(|x| Vec2::xy(x, y))
                 .collect();
 
-            if row.iter().all(|item| self.tiles.contains(&Tile::new(*item)))
-            {
-                self.score += 1;
-                self.tiles.retain(|t| t.y != y);
-                for tile in &mut self.tiles {
-                    if tile.y < y {
-                        tile.y += 1;
-                    }
+            if !row.iter().all(|item| self.tiles.contains(&Tile::new(*item))) {
+                continue;
+            }
+
+            self.score += 1;
+            self.tiles.retain(|t| t.y != y);
+
+            for tile in &mut self.tiles {
+                if tile.y >= y {
+                    continue;
                 }
+
+                tile.y += 1;
             }
         }
     }
@@ -424,7 +437,7 @@ fn main() {
         let origin = (win_size - Vec2::xy(state.dimension.x * 2, state.dimension.y)) / 2;
         pencil.set_origin(origin);
 
-        if state.hit_ceiling() {
+        if state.hit_ceiling {
             let msg = format!("You lose :( score: {}", state.score);
             pencil.set_origin(win_size / 2 - Vec2::x(msg.len() / 2));
             pencil.draw_text(&msg, Vec2::zero());
@@ -435,10 +448,12 @@ fn main() {
         pencil.set_foreground(state.current_piece.piece_type.get_color());
 
         for pos in &state.current_piece.tiles {
-            if pos.y >= 0 {
-                pencil.draw_char('[', Vec2::xy(pos.x * 2, pos.y));
-                pencil.draw_char(']', Vec2::xy(pos.x * 2 + 1, pos.y));
+            if pos.y < 0 {
+                continue;
             }
+
+            pencil.draw_char('[', Vec2::xy(pos.x * 2, pos.y));
+            pencil.draw_char(']', Vec2::xy(pos.x * 2 + 1, pos.y));
         }
 
         for tile in &state.tiles {
@@ -449,17 +464,14 @@ fn main() {
 
         pencil.set_foreground(Color::Xterm(8));
 
-        for y in 0..state.dimension.y + 3 {
-            for x in 0..state.dimension.x + 3 {
-                if x == 0 {
-                    pencil.draw_char('│', Vec2::xy(x * 2 - 1, y - 1));
-                } else if x == state.dimension.x + 2 {
-                    pencil.draw_char('│', Vec2::xy(x * 2 - 2, y - 1));
-                } else if y == 0 || y == state.dimension.y + 2 {
-                    pencil.draw_char('─', Vec2::xy(x * 2 - 2, y - 1));
-                    pencil.draw_char('─', Vec2::xy(x * 2 - 1, y - 1));
-                }
-            }
+        for y in 0..=state.dimension.y + 1 {
+            pencil.draw_char('│', Vec2::xy(-1, y));
+            pencil.draw_char('│', Vec2::xy(2 * state.dimension.x + 2, y));
+        }
+
+        for x in 0..=2 * state.dimension.x + 1 {
+            pencil.draw_char('─', Vec2::xy(x, 0));
+            pencil.draw_char('─', Vec2::xy(x, state.dimension.y + 1));
         }
 
         pencil.set_foreground(Color::Xterm(15));
