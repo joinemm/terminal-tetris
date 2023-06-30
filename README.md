@@ -34,15 +34,17 @@ Ruscii does not support Wayland. The only way that other packages have been able
 
 ### Known Bugs
 
-- Rotations of 'O' piece cause the piece to jump
+- ~~Rotations of 'O' piece cause the piece to jump~~
 - Next piece view missing
 - Scoring formula incorrect
 - Levels not implemented
+- Drop speeds and timings are incorrect
 
 ### Roadmap
 
-- [ ] Fix 'O' rotations
+- [X] Fix 'O' rotations
 - [ ] Fix scoring formula
+- [ ] Fix drop speeds
 - [ ] Implement levels
 - [ ] Implement next piece view
 - [ ] Add dot file for choosing which feature set is wanted

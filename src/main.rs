@@ -20,84 +20,24 @@ enum TetriminoType {
     O,
 }
 
-struct TetriminoPrimitive {
-    tetrimino_type: TetriminoType,
-    color: Color,
-    tiles: [Vec2; 4],
+enum RotationDirection {
+    Clockwise,
+    Counterclockwise,
 }
 
-impl TetriminoPrimitive {
-    pub fn get_wall_kicks(&self, from: usize, to: usize) -> TetriminoWallKicks {
-        match self.tetrimino_type {
-            TetriminoType::O => TetriminoWallKicks::O(O_OFFSETS[from] - O_OFFSETS[to]),
-            TetriminoType::I => TetriminoWallKicks::Other(core::array::from_fn(
-                |i| I_OFFSETS_TABLE[i][from] - I_OFFSETS_TABLE[i][to])),
-            _ => TetriminoWallKicks::Other(core::array::from_fn(
-                |i| OTHER_OFFSETS_TABLE[i][from] - OTHER_OFFSETS_TABLE[i][to])),
-        }
-    }
+enum MovementCheck {
+    CanMove,
+    TouchingWall,
+    TouchingStack,
 }
 
-const I_OFFSETS_TABLE: [[Vec2; 4]; 5] = [
-    [Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}, Vec2 {x: -1, y: 1}, Vec2 {x: 0, y: 1}],
-    [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 1}, Vec2 {x: 0, y: 1}],
-    [Vec2 {x: 2, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: -2, y: 1}, Vec2 {x: 0, y: 1}],
-    [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 1}, Vec2 {x: 1, y: 0}, Vec2 {x: 0, y: -1}],
-    [Vec2 {x: 2, y: 0}, Vec2 {x: 0, y: -2}, Vec2 {x: -2, y: 0}, Vec2 {x: 0, y: 2}],
-];
-
-const O_OFFSETS: [Vec2; 4] = [
-    Vec2 {x: 0, y: 0}, Vec2 {x: 0, y: -1}, Vec2 {x: -1, y: -1}, Vec2 {x: -1, y: 0}];
-
-const OTHER_OFFSETS_TABLE: [[Vec2; 4]; 5] = [
-    [Vec2 {x: 0, y: 0}; 4],
-    [Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}],
-    [Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: -1}],
-    [Vec2 {x: 0, y: 0}, Vec2 {x: 0, y: 2}, Vec2 {x: 0, y: 0}, Vec2 {x: 0, y: 2}],
-    [Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 2}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 2}],
-];
-
-const J: TetriminoPrimitive = TetriminoPrimitive {
-    tetrimino_type: TetriminoType::J,
-    color: Color::Xterm(9),
-    tiles: [Vec2 {x: -1, y: -1}, Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
-};
-
-const L: TetriminoPrimitive = TetriminoPrimitive {
-    tetrimino_type: TetriminoType::L,
-    color: Color::Xterm(10),
-    tiles: [Vec2 {x: 1, y: -1}, Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
-};
-
-const S: TetriminoPrimitive = TetriminoPrimitive {
-    tetrimino_type: TetriminoType::S,
-    color: Color::Xterm(11),
-    tiles: [Vec2 {x: 1, y: -1}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}],
-};
-
-const T: TetriminoPrimitive = TetriminoPrimitive {
-    tetrimino_type: TetriminoType::T,
-    color: Color::Xterm(12),
-    tiles: [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
-};
-
-const Z: TetriminoPrimitive = TetriminoPrimitive {
-    tetrimino_type: TetriminoType::Z,
-    color: Color::Xterm(13),
-    tiles: [Vec2 {x: 1, y: 0}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: -1}],
-};
-
-const I: TetriminoPrimitive = TetriminoPrimitive {
-    tetrimino_type: TetriminoType::I,
-    color: Color::Xterm(14),
-    tiles: [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}, Vec2 {x: 2, y: 0}],
-};
-
-const O: TetriminoPrimitive = TetriminoPrimitive {
-    tetrimino_type: TetriminoType::O,
-    color: Color::Xterm(15),
-    tiles: [Vec2 {x: 1, y: -1}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
-};
+#[derive(Clone)]
+enum Rotation {
+    Zero,
+    Two,
+    Left,
+    Right,
+}
 
 impl Distribution<TetriminoType> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> TetriminoType {
@@ -112,6 +52,180 @@ impl Distribution<TetriminoType> for Standard {
         }
     }
 }
+
+struct TetriminoPrimitive {
+    tetrimino_type: TetriminoType,
+    color: Color,
+    zero: [Vec2; 4],
+    left: [Vec2; 4],
+    right: [Vec2; 4],
+    two: [Vec2; 4],
+}
+
+const fn rotate_right(input: [Vec2; 4]) -> [Vec2; 4] {
+    [
+        Vec2 { x: -input[0].y, y: input[0].x },
+        Vec2 { x: -input[1].y, y: input[1].x },
+        Vec2 { x: -input[2].y, y: input[2].x },
+        Vec2 { x: -input[3].y, y: input[3].x },
+    ] 
+}
+
+impl TetriminoPrimitive {
+    const fn new(
+        tetrimino_type: TetriminoType,
+        color: Color,
+        zero: [Vec2; 4],
+    ) -> Self {
+        let right = rotate_right(zero);
+        let two = rotate_right(right);
+        let left = rotate_right(two);
+
+        Self {
+            tetrimino_type,
+            color,
+            zero,
+            left,
+            right,
+            two,
+        }
+    }
+
+    pub fn get_random_primative() -> &'static Self {
+        match rand::random::<TetriminoType>() {
+            TetriminoType::J => &J,
+            TetriminoType::L => &L,
+            TetriminoType::S => &S,
+            TetriminoType::T => &T,
+            TetriminoType::Z => &Z,
+            TetriminoType::I => &I,
+            TetriminoType::O => &O,
+        }
+    }
+
+    pub fn get_wall_kicks(&self, from: &Rotation, to: &Rotation) -> TetriminoWallKicks {
+        let from_idx = match from {
+            &Rotation::Zero => 0,
+            &Rotation::Right => 1,
+            &Rotation::Two => 2,
+            &Rotation::Left => 3,
+        };
+
+        let to_idx = match to {
+            &Rotation::Zero => 0,
+            &Rotation::Right => 1,
+            &Rotation::Two => 2,
+            &Rotation::Left => 3, 
+        };
+
+        match self.tetrimino_type {
+            TetriminoType::O  => {
+                TetriminoWallKicks::O(O_OFFSETS[from_idx] - O_OFFSETS[to_idx])
+            }
+
+            TetriminoType::I => {
+                TetriminoWallKicks::Other(core::array::from_fn(
+                |i| I_OFFSETS_TABLE[i][from_idx] - I_OFFSETS_TABLE[i][to_idx]))
+            }
+
+            _ => {
+                TetriminoWallKicks::Other(core::array::from_fn(
+                |i| OTHER_OFFSETS_TABLE[i][from_idx] - OTHER_OFFSETS_TABLE[i][to_idx]))
+            }
+        }
+    }
+
+    pub fn get_positions(&self, rotation: &Rotation) -> [Vec2; 4] {
+        match rotation {
+            &Rotation::Zero => self.zero,
+            &Rotation::Left => self.left,
+            &Rotation::Right => self.right,
+            &Rotation::Two => self.two,
+        }
+    }
+}
+
+// use xterm 0 for background color
+const BACKGROUND_COLOR: Color = Color::Xterm(0);
+const BORDER_COLOR: Color = Color::Xterm(8);
+const SCORE_COLOR: Color = Color::Xterm(15);
+const CONTROLS_COLOR: Color = Color::Xterm(15);
+const FPS: u32 = 60;
+const FIELD_SIZE: Vec2 = Vec2 {x: 9, y: 19};
+const DROP_SPEED: usize = 0;
+const TAP_DROP_SPEED: usize = 20;
+
+const CONTROLS_TEXT: [&str; 5] = [
+    "⇦ ⇨ : move left/right",
+    "X, ⇧ : rotate clockwise",
+    "Z : rotate counterclockwise",
+    "SPACE, ⇩ : drop",
+    "ESC, Q : quit game",
+];
+
+const I_OFFSETS_TABLE: [[Vec2; 4]; 5] = [
+    [Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}, Vec2 {x: -1, y: -1}, Vec2 {x: 0, y: -1}],
+    [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: -1}, Vec2 {x: 0, y: -1}],
+    [Vec2 {x: 2, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: -2, y: -1}, Vec2 {x: 0, y: -1}],
+    [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: -1}, Vec2 {x: 1, y: 0}, Vec2 {x: 0, y: 1}],
+    [Vec2 {x: 2, y: 0}, Vec2 {x: 0, y: -2}, Vec2 {x: -2, y: 0}, Vec2 {x: 0, y: -2}],
+];
+
+const O_OFFSETS: [Vec2; 4] = [
+    Vec2 {x: 0, y: 0}, Vec2 {x: 0, y: 1}, Vec2 {x: -1, y: 1}, Vec2 {x: -1, y: 0}];
+
+const OTHER_OFFSETS_TABLE: [[Vec2; 4]; 5] = [
+    [Vec2 {x: 0, y: 0}; 4],
+    [Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}],
+    [Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 1}],
+    [Vec2 {x: 0, y: 0}, Vec2 {x: 0, y: -2}, Vec2 {x: 0, y: 0}, Vec2 {x: 0, y: -2}],
+    [Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: -2}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: -2}],
+];
+
+const J: TetriminoPrimitive = TetriminoPrimitive::new(
+    TetriminoType::J,
+    Color::Xterm(9),
+    [Vec2 {x: -1, y: -1}, Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
+);
+
+const L: TetriminoPrimitive = TetriminoPrimitive::new(
+    TetriminoType::L,
+    Color::Xterm(10),
+    [Vec2 {x: 1, y: -1}, Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
+);
+
+const S: TetriminoPrimitive = TetriminoPrimitive::new(
+    TetriminoType::S,
+    Color::Xterm(11),
+    [Vec2 {x: 1, y: -1}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}],
+);
+
+const T: TetriminoPrimitive = TetriminoPrimitive::new(
+    TetriminoType::T,
+    Color::Xterm(12),
+    [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
+);
+
+const Z: TetriminoPrimitive = TetriminoPrimitive::new(
+    TetriminoType::Z,
+    Color::Xterm(13),
+    [Vec2 {x: 1, y: 0}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: -1}],
+);
+
+const I: TetriminoPrimitive = TetriminoPrimitive::new(
+    TetriminoType::I,
+    Color::Xterm(14),
+    [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}, Vec2 {x: 2, y: 0}],
+);
+
+const O: TetriminoPrimitive = TetriminoPrimitive::new(
+    TetriminoType::O,
+    Color::Xterm(15),
+    [Vec2 {x: 1, y: -1}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
+);
+//left: [Vec2 {x: 1, y: 1}, Vec2 {x: 0, y: 1}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
+//right: [Vec2 {x: -1, y: 1}, Vec2 {x: 0, y: 1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}],
+//two: [Vec2 {x: -1, y: -1}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}],
 
 #[derive(Clone, Eq)]
 struct Tile {
@@ -145,142 +259,130 @@ impl Tile {
             location,
         }
     }
-
-    pub fn with_color(location: Vec2, color: Color) -> Self {
-        Self { color, location }
-    }
 }
 
 #[derive(Clone)]
 struct Tetrimino<'a> {
     primitive: &'a TetriminoPrimitive,
-    tiles: [Vec2; 4],
-    location: Vec2,
-    rotation_index: usize,
+    origin: Vec2,
+    rotation: Rotation,
 }
 
 impl Tetrimino<'_> {
-    pub fn new(location: Vec2) -> Self {
-        let primitive = match rand::random::<TetriminoType>() {
-            TetriminoType::J => &J,
-            TetriminoType::L => &L,
-            TetriminoType::S => &S,
-            TetriminoType::T => &T,
-            TetriminoType::Z => &Z,
-            TetriminoType::I => &I,
-            TetriminoType::O => &O,
-        };
-
-        let mut tiles = primitive.tiles.clone();
-        tiles.iter_mut().for_each(|t| *t += location);
+    pub fn new(origin: Vec2) -> Self {
+        let primitive = TetriminoPrimitive::get_random_primative();
 
         Self {
             primitive,
-            tiles,
-            location,
-            rotation_index: 0,
+            origin,
+            rotation: Rotation::Zero,
         }
     }
 
-    pub fn move_self(&mut self, direction: Vec2) {
-        self.location += direction;
-        for tile in &mut self.tiles {
-            *tile += direction;
-        }
-    }
-
-    fn set_tiles(&mut self, tilemap: [Vec2; 4]) {
-        self.tiles
-            .iter_mut()
-            .enumerate()
-            .for_each(|(i, t)| *t = tilemap[i] + self.location);
-    }
-
-    fn get_tilemap(&self) -> [Vec2; 4] {
-        let mut tilemap: [Vec2; 4] = self.tiles.clone();
-        tilemap.iter_mut().for_each(|t| *t -= self.location);
-        tilemap
-    }
-
-    fn can_move(
-        &self, movement: Vec2, blocking_tiles: &[Tile], arena_dimensions: &Vec2) -> bool {
-        for tile in &self.tiles {
-            match Tile::new(*tile + movement) {
-                t if blocking_tiles.contains(&t) => { return false; },
-                t if t.x < 0 => { return false; },
-                t if t.x > arena_dimensions.x => { return false; },
-                t if t.y > arena_dimensions.y => { return false; },
-                _ => {()},
-            }
-        }
-        true
-    }
-
-    fn wall_kick(
+    pub fn translate(
         &mut self,
-        new_rotation_index: usize,
+        translation: Vec2,
         blocking_tiles: &[Tile],
         arena_dimensions: &Vec2,
     ) -> bool {
-        match self.primitive.get_wall_kicks(self.rotation_index, new_rotation_index) {
-            TetriminoWallKicks::O(wall_kick) => {
-                self.move_self(wall_kick);
+        let new_locations = self.get_locations(self.origin + translation, &self.rotation);
+        match self.can_move(new_locations, blocking_tiles, arena_dimensions) {
+            MovementCheck::CanMove => {
+                self.origin += translation;
                 true
-            }
-
-            TetriminoWallKicks::Other(wall_kicks) => {
-                for wall_kick in wall_kicks.iter() {
-                    if !self.can_move(*wall_kick, blocking_tiles, arena_dimensions) {
-                        continue;
-                    }
-
-                    self.move_self(*wall_kick);
-                    return true;
-                }
-                false
-            }
+            },
+            MovementCheck::TouchingWall => true,
+            MovementCheck::TouchingStack => false,
         }
+    }
+
+    fn get_locations(&self, origin: Vec2, rotation: &Rotation) -> [Vec2; 4] {
+        let mut relative_locations = self.primitive.get_positions(&rotation);
+        relative_locations
+            .iter_mut()
+            .for_each(|p| *p += origin);
+        relative_locations
+    }
+
+    fn get_tiles(&self) -> [Tile; 4] {
+        let relative_positions = self.primitive.get_positions(&self.rotation);
+        core::array::from_fn(
+            |i| Tile {
+                color: self.primitive.color,
+                location: relative_positions[i] + self.origin
+            }
+        )
+    }
+
+    fn can_move(
+        &self,
+        new_locations: [Vec2; 4],
+        blocking_tiles: &[Tile],
+        arena_dimensions: &Vec2,
+    ) -> MovementCheck {
+        for location in new_locations {
+            match Tile::new(location) {
+                t if blocking_tiles.contains(&t) => { return MovementCheck::TouchingStack; },
+                t if t.y > arena_dimensions.y => { return MovementCheck::TouchingStack; },
+                _ => (),
+            };
+            match location {
+                t if t.x < 0 => { return MovementCheck::TouchingWall; },
+                t if t.x > arena_dimensions.x => { return MovementCheck::TouchingWall; },
+                _ => (),
+            };
+        }
+        MovementCheck::CanMove
     }
 
     pub fn rotate(
         &mut self,
-        clockwise: bool,
+        rotation_direction: RotationDirection,
         blocking_tiles: &Vec<Tile>,
         arena_dimensions: &Vec2,
-        kick: bool,
     ) {
-        let direction = match clockwise {
-            true => 1,
-            false => -1,
+        let new_rotation = match rotation_direction {
+            RotationDirection::Clockwise => match self.rotation {
+                Rotation::Zero => Rotation::Right,
+                Rotation::Right => Rotation::Two,
+                Rotation::Two => Rotation::Left,
+                Rotation::Left => Rotation::Zero,
+            }
+
+            RotationDirection::Counterclockwise => match self.rotation {
+                Rotation::Zero => Rotation::Left,
+                Rotation::Left => Rotation::Two,
+                Rotation::Two => Rotation::Right,
+                Rotation::Right => Rotation::Zero,
+            }
         };
 
-        let rotation_matrix = match clockwise {
-            true => [Vec2::xy(0, 1), Vec2::xy(-1, 0)],
-            false => [Vec2::xy(0, -1), Vec2::xy(1, 0)],
+        let rotated_positions = self.primitive.get_positions(&new_rotation);
+
+        match self.primitive.get_wall_kicks(&self.rotation, &new_rotation) {
+            TetriminoWallKicks::O(kick) => {
+                self.rotation = new_rotation;
+                self.origin += kick;
+            },
+
+            TetriminoWallKicks::Other(kicks) => {
+                for kick in kicks.iter() {
+                    let kicked_locations: [Vec2; 4] = core::array::from_fn(
+                        |i| *kick + rotated_positions[i] + self.origin);
+
+                    match self.can_move(
+                        kicked_locations, blocking_tiles, arena_dimensions) {
+                        MovementCheck::CanMove => {
+                            self.rotation = new_rotation;
+                            self.origin += *kick;
+                            break;
+                        }
+                        _ => (),
+                    }
+                }
+                return;
+            }
         };
-
-        let new_rotation_index = ((self.rotation_index as i32 + direction) % 4) as usize;
-        let tilemap = self.get_tilemap();
-
-        let new_tilemap: [Vec2; 4] = core::array::from_fn(
-            |i| Vec2::xy(
-                (rotation_matrix[0].x * tilemap[i].x)
-                    + (rotation_matrix[1].x * tilemap[i].y),
-                (rotation_matrix[0].y * tilemap[i].x)
-                    + (rotation_matrix[1].y * tilemap[i].y),
-            )
-        );
-
-        self.set_tiles(new_tilemap);
-
-        if !kick {
-            return;
-        }
-
-        match self.wall_kick(new_rotation_index, blocking_tiles, arena_dimensions) {
-            true => { self.rotation_index = new_rotation_index; }
-            false => self.rotate(!clockwise, blocking_tiles, arena_dimensions, false)
-        }
     }
 }
 
@@ -304,7 +406,7 @@ impl GameState<'_> {
             last_input: (0, 0),
             drop_speed: 20,
             score: 0,
-            current_tetrimino: Tetrimino::new(Vec2::xy(dimension.x / 2, 0)),
+            current_tetrimino: Tetrimino::new(Vec2::x(dimension.x / 2)),
             hit_ceiling: false,
         }
     }
@@ -316,15 +418,14 @@ impl GameState<'_> {
             
         self.last_update = frame;
         
-        if self.current_tetrimino.can_move(Vec2::xy(0, 1), &self.tiles, &self.dimension) {
-            self.current_tetrimino.move_self(Vec2::xy(0, 1));
+        if self.current_tetrimino.translate(Vec2::y(1), &self.tiles, &self.dimension) {
             return;
         }
                 
         // make piece part of current tile set and spawn a new piece
-        for tile in &self.current_tetrimino.tiles {
-            self.tiles.push(Tile::with_color(*tile, self.current_tetrimino.primitive.color));
-            
+        for tile in self.current_tetrimino.get_tiles() {
+            self.tiles.push(tile.clone());
+
             if tile.y >= 0 {
                 continue;
             }
@@ -335,12 +436,12 @@ impl GameState<'_> {
         self.spawn_tetrimino();
     }
 
-    pub fn rotate_tetrimino(&mut self, clockwise: bool) {
-        self.current_tetrimino.rotate(clockwise, &self.tiles, &self.dimension, true);
+    pub fn rotate_tetrimino(&mut self, rotation_direction: RotationDirection) {
+        self.current_tetrimino.rotate(rotation_direction, &self.tiles, &self.dimension); 
     }
 
     pub fn spawn_tetrimino(&mut self) {
-        self.current_tetrimino = Tetrimino::new(Vec2::xy(self.dimension.x / 2, 0))
+        self.current_tetrimino = Tetrimino::new(Vec2::x(self.dimension.x / 2))
     }
 
     pub fn tile_move_x(&mut self, displacement: i32, frame: usize) {
@@ -349,13 +450,9 @@ impl GameState<'_> {
         }
 
         self.last_input = (frame, displacement);
-        let movement = Vec2::xy(displacement, 0);
+        let movement = Vec2::x(displacement);
 
-        if !self.current_tetrimino.can_move(movement, &self.tiles, &self.dimension) {
-            return;
-        }
-
-        self.current_tetrimino.move_self(movement);
+        self.current_tetrimino.translate(movement, &self.tiles, &self.dimension);
     }
 
     pub fn set_speed(&mut self, speed: usize) {
@@ -386,105 +483,124 @@ impl GameState<'_> {
     }
 }
 
+fn draw_tile(pencil: &mut Pencil, tile: &Tile) {
+    pencil.set_foreground(tile.color);
+    pencil.draw_char('[', Vec2::xy(tile.x * 2, tile.y));
+    pencil.draw_char(']', Vec2::xy(tile.x * 2 + 1, tile.y));
+}
+
+fn draw_border(pencil: &mut Pencil, state: &GameState) {
+    pencil.set_foreground(BORDER_COLOR);
+
+    for y in 0..=state.dimension.y + 1 {
+        pencil.draw_char('│', Vec2::xy(-1, y));
+        pencil.draw_char('│', Vec2::xy(2 * state.dimension.x + 2, y));
+    }
+
+    for x in 0..=2 * state.dimension.x + 1 {
+        pencil.draw_char('─', Vec2::x(x));
+        pencil.draw_char('─', Vec2::xy(x, state.dimension.y + 1));
+    }
+}
+
+fn draw_score(pencil: &mut Pencil, game_state: &GameState) {
+    pencil.set_foreground(SCORE_COLOR);
+    pencil.draw_text(&format!("score: {}", game_state.score), Vec2::zero());
+}
+
+fn draw_controls(pencil: &mut Pencil) {
+    pencil.set_foreground(CONTROLS_COLOR);
+    for (i, ctrl) in CONTROLS_TEXT.iter().enumerate() {
+        pencil.draw_text(ctrl, Vec2::y(2 + i));
+    }
+}
+
+fn handle_controls(app_state: &State, game_state: &mut GameState) {
+    for key_event in app_state.keyboard().last_key_events() {
+        match key_event {
+            KeyEvent::Pressed(Key::Esc) | KeyEvent::Pressed(Key::Q) => {
+                app_state.stop();
+            }
+            KeyEvent::Pressed(Key::Z) => {
+                game_state.rotate_tetrimino(RotationDirection::Counterclockwise);
+            }
+            KeyEvent::Pressed(Key::X) | KeyEvent::Pressed(Key::Up) => {
+                game_state.rotate_tetrimino(RotationDirection::Clockwise);
+            }
+            KeyEvent::Released(Key::Left) => {
+                game_state.last_input = (0, -1);
+            }
+            KeyEvent::Released(Key::Right) => {
+                game_state.last_input = (0, 1);
+            }
+            KeyEvent::Released(Key::Space) | KeyEvent::Released(Key::Down) => {
+                game_state.set_speed(TAP_DROP_SPEED)
+            }
+            _ => (),
+        }
+    }
+
+    for key_down in app_state.keyboard().get_keys_down() {
+        match key_down {
+            Key::Left => game_state.tile_move_x(-1, app_state.step()),
+            Key::Right => game_state.tile_move_x(1, app_state.step()),
+            Key::Space | Key::Down => game_state.set_speed(DROP_SPEED),
+            _ => (),
+        }
+    }
+}
+
+fn game_over(pencil: &mut Pencil, game_state: &GameState, window_size: Vec2) {
+    let msg = format!("You lose :( score: {}", game_state.score);
+    pencil.set_origin(window_size / 2 - Vec2::x(msg.len() / 2));
+    pencil.draw_text(&msg, Vec2::zero());
+}
+
+fn game_loop(
+    game_state: &mut GameState,
+    default: VisualElement,
+    app_state: &mut State,
+    window: &mut Window,
+) {
+    let window_size = window.size();
+    window.canvas_mut().set_default_element(&default);
+    handle_controls(app_state, game_state);
+    game_state.update(app_state.step());
+    let mut pencil = Pencil::new(window.canvas_mut());
+    let origin = (-Vec2::xy(2, 1) * game_state.dimension + window_size) / 2;
+    pencil.set_origin(origin);
+
+    if game_state.hit_ceiling {
+        game_over(&mut pencil, &game_state, window_size);
+        return;
+    }
+
+    game_state.clear_rows();
+
+    for tile in game_state.current_tetrimino.get_tiles() {
+        if tile.y < 0 {
+            continue;
+        }
+
+        draw_tile(&mut pencil, &tile);
+    }
+
+    for tile in &game_state.tiles {
+        draw_tile(&mut pencil, tile)
+    }
+
+    draw_border(&mut pencil, &game_state);
+    pencil.set_origin(Vec2::x(game_state.dimension.x * 2 + 6) + origin);
+    draw_score(&mut pencil, &game_state);
+    draw_controls(&mut pencil);
+}
+
 fn main() {
-    let controls_text: [&str; 5] = [
-        "⇦ ⇨ : move left/right",
-        "X, ⇧ : rotate clockwise",
-        "Z : rotate counterclockwise",
-        "SPACE, ⇩ : drop",
-        "ESC, Q : quit game",
-    ];
-
-    let mut app = App::config(Config { fps: 60 });
-    let mut state = GameState::new(Vec2::xy(9, 19));
+    let mut app = App::config(Config{ fps: FPS });
+    let mut game_state = GameState::new(FIELD_SIZE);
     let mut default = VisualElement::new();
-
-    // use xterm 0 for background color
-    default.background = Color::Xterm(0);
-
-    app.run(|app_state: &mut State, window: &mut Window| {
-        window.canvas_mut().set_default_element(&default);
-
-        for key_event in app_state.keyboard().last_key_events() {
-            match key_event {
-                KeyEvent::Pressed(Key::Esc) | KeyEvent::Pressed(Key::Q) => {
-                    app_state.stop();
-                }
-                KeyEvent::Pressed(Key::Z) => state.rotate_tetrimino(false),
-                KeyEvent::Pressed(Key::X) | KeyEvent::Pressed(Key::Up) => {
-                    state.rotate_tetrimino(true);
-                }
-                KeyEvent::Released(Key::Left) => {
-                    state.last_input = (0, -1);
-                }
-                KeyEvent::Released(Key::Right) => {
-                    state.last_input = (0, 1);
-                }
-                KeyEvent::Released(Key::Space) | KeyEvent::Released(Key::Down) => {
-                    state.set_speed(20)
-                }
-                _ => (),
-            }
-        }
-
-        for key_down in app_state.keyboard().get_keys_down() {
-            match key_down {
-                Key::Left => state.tile_move_x(-1, app_state.step()),
-                Key::Right => state.tile_move_x(1, app_state.step()),
-                Key::Space | Key::Down => state.set_speed(0),
-                _ => (),
-            }
-        }
-
-        state.update(app_state.step());
-        let win_size = window.size();
-        let mut pencil = Pencil::new(window.canvas_mut());
-        let origin = (win_size - Vec2::xy(state.dimension.x * 2, state.dimension.y)) / 2;
-        pencil.set_origin(origin);
-
-        if state.hit_ceiling {
-            let msg = format!("You lose :( score: {}", state.score);
-            pencil.set_origin(win_size / 2 - Vec2::x(msg.len() / 2));
-            pencil.draw_text(&msg, Vec2::zero());
-            return;
-        }
-
-        state.clear_rows();
-        pencil.set_foreground(state.current_tetrimino.primitive.color);
-
-        for pos in &state.current_tetrimino.tiles {
-            if pos.y < 0 {
-                continue;
-            }
-
-            pencil.draw_char('[', Vec2::xy(pos.x * 2, pos.y));
-            pencil.draw_char(']', Vec2::xy(pos.x * 2 + 1, pos.y));
-        }
-
-        for tile in &state.tiles {
-            pencil.set_foreground(tile.color);
-            pencil.draw_char('[', Vec2::xy(tile.x * 2, tile.y));
-            pencil.draw_char(']', Vec2::xy(tile.x * 2 + 1, tile.y));
-        }
-
-        pencil.set_foreground(Color::Xterm(8));
-
-        for y in 0..=state.dimension.y + 1 {
-            pencil.draw_char('│', Vec2::xy(-1, y));
-            pencil.draw_char('│', Vec2::xy(2 * state.dimension.x + 2, y));
-        }
-
-        for x in 0..=2 * state.dimension.x + 1 {
-            pencil.draw_char('─', Vec2::xy(x, 0));
-            pencil.draw_char('─', Vec2::xy(x, state.dimension.y + 1));
-        }
-
-        pencil.set_foreground(Color::Xterm(15));
-        pencil.set_origin(Vec2::xy(origin.x + state.dimension.x * 2 + 6, origin.y));
-        pencil.draw_text(&format!("score: {}", state.score), Vec2::xy(0, 0));
-
-        for (i, ctrl) in controls_text.iter().enumerate() {
-            pencil.draw_text(ctrl, Vec2::xy(0, 2 + i));
-        }
-    });
+    default.background = BACKGROUND_COLOR;
+    let runnable_game_loop = |app_state: &mut State, window: &mut Window| game_loop(
+        &mut game_state, default, app_state, window);
+    app.run(runnable_game_loop);
 }
