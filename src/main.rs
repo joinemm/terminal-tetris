@@ -1,9 +1,15 @@
-use rand::{ distributions::{Distribution, Standard}, Rng };
+use rand::{
+    distributions::{Distribution, Standard},
+    Rng,
+};
 use ruscii::drawing::Pencil;
 use ruscii::keyboard::{Key, KeyEvent};
 use ruscii::spatial::Vec2;
 use ruscii::terminal::{Color, Window};
-use ruscii::{ app::{App, Config, State}, terminal::VisualElement };
+use ruscii::{
+    app::{App, Config, State},
+    terminal::VisualElement,
+};
 
 enum TetriminoWallKicks {
     O(Vec2),
@@ -64,19 +70,27 @@ struct TetriminoPrimitive {
 
 const fn rotate_right(input: [Vec2; 4]) -> [Vec2; 4] {
     [
-        Vec2 { x: -input[0].y, y: input[0].x },
-        Vec2 { x: -input[1].y, y: input[1].x },
-        Vec2 { x: -input[2].y, y: input[2].x },
-        Vec2 { x: -input[3].y, y: input[3].x },
-    ] 
+        Vec2 {
+            x: -input[0].y,
+            y: input[0].x,
+        },
+        Vec2 {
+            x: -input[1].y,
+            y: input[1].x,
+        },
+        Vec2 {
+            x: -input[2].y,
+            y: input[2].x,
+        },
+        Vec2 {
+            x: -input[3].y,
+            y: input[3].x,
+        },
+    ]
 }
 
 impl TetriminoPrimitive {
-    const fn new(
-        tetrimino_type: TetriminoType,
-        color: Color,
-        zero: [Vec2; 4],
-    ) -> Self {
+    const fn new(tetrimino_type: TetriminoType, color: Color, zero: [Vec2; 4]) -> Self {
         let right = rotate_right(zero);
         let two = rotate_right(right);
         let left = rotate_right(two);
@@ -115,23 +129,17 @@ impl TetriminoPrimitive {
             &Rotation::Zero => 0,
             &Rotation::Right => 1,
             &Rotation::Two => 2,
-            &Rotation::Left => 3, 
+            &Rotation::Left => 3,
         };
 
         match self.tetrimino_type {
-            TetriminoType::O  => {
-                TetriminoWallKicks::O(O_OFFSETS[from_idx] - O_OFFSETS[to_idx])
-            }
-
-            TetriminoType::I => {
-                TetriminoWallKicks::Other(core::array::from_fn(
-                |i| I_OFFSETS_TABLE[i][from_idx] - I_OFFSETS_TABLE[i][to_idx]))
-            }
-
-            _ => {
-                TetriminoWallKicks::Other(core::array::from_fn(
-                |i| OTHER_OFFSETS_TABLE[i][from_idx] - OTHER_OFFSETS_TABLE[i][to_idx]))
-            }
+            TetriminoType::O => TetriminoWallKicks::O(O_OFFSETS[from_idx] - O_OFFSETS[to_idx]),
+            TetriminoType::I => TetriminoWallKicks::Other(core::array::from_fn(|i| {
+                I_OFFSETS_TABLE[i][from_idx] - I_OFFSETS_TABLE[i][to_idx]
+            })),
+            _ => TetriminoWallKicks::Other(core::array::from_fn(|i| {
+                OTHER_OFFSETS_TABLE[i][from_idx] - OTHER_OFFSETS_TABLE[i][to_idx]
+            })),
         }
     }
 
@@ -151,7 +159,7 @@ const BORDER_COLOR: Color = Color::Xterm(8);
 const SCORE_COLOR: Color = Color::Xterm(15);
 const CONTROLS_COLOR: Color = Color::Xterm(15);
 const FPS: u32 = 60;
-const FIELD_SIZE: Vec2 = Vec2 {x: 9, y: 19};
+const FIELD_SIZE: Vec2 = Vec2 { x: 9, y: 19 };
 const DROP_SPEED: usize = 0;
 const TAP_DROP_SPEED: usize = 20;
 
@@ -164,68 +172,149 @@ const CONTROLS_TEXT: [&str; 5] = [
 ];
 
 const I_OFFSETS_TABLE: [[Vec2; 4]; 5] = [
-    [Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}, Vec2 {x: -1, y: -1}, Vec2 {x: 0, y: -1}],
-    [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: -1}, Vec2 {x: 0, y: -1}],
-    [Vec2 {x: 2, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: -2, y: -1}, Vec2 {x: 0, y: -1}],
-    [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: -1}, Vec2 {x: 1, y: 0}, Vec2 {x: 0, y: 1}],
-    [Vec2 {x: 2, y: 0}, Vec2 {x: 0, y: -2}, Vec2 {x: -2, y: 0}, Vec2 {x: 0, y: -2}],
+    [
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: -1, y: 0 },
+        Vec2 { x: -1, y: -1 },
+        Vec2 { x: 0, y: -1 },
+    ],
+    [
+        Vec2 { x: -1, y: 0 },
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: 1, y: -1 },
+        Vec2 { x: 0, y: -1 },
+    ],
+    [
+        Vec2 { x: 2, y: 0 },
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: -2, y: -1 },
+        Vec2 { x: 0, y: -1 },
+    ],
+    [
+        Vec2 { x: -1, y: 0 },
+        Vec2 { x: 0, y: -1 },
+        Vec2 { x: 1, y: 0 },
+        Vec2 { x: 0, y: 1 },
+    ],
+    [
+        Vec2 { x: 2, y: 0 },
+        Vec2 { x: 0, y: -2 },
+        Vec2 { x: -2, y: 0 },
+        Vec2 { x: 0, y: -2 },
+    ],
 ];
 
 const O_OFFSETS: [Vec2; 4] = [
-    Vec2 {x: 0, y: 0}, Vec2 {x: 0, y: 1}, Vec2 {x: -1, y: 1}, Vec2 {x: -1, y: 0}];
+    Vec2 { x: 0, y: 0 },
+    Vec2 { x: 0, y: 1 },
+    Vec2 { x: -1, y: 1 },
+    Vec2 { x: -1, y: 0 },
+];
 
 const OTHER_OFFSETS_TABLE: [[Vec2; 4]; 5] = [
-    [Vec2 {x: 0, y: 0}; 4],
-    [Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}],
-    [Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 1}],
-    [Vec2 {x: 0, y: 0}, Vec2 {x: 0, y: -2}, Vec2 {x: 0, y: 0}, Vec2 {x: 0, y: -2}],
-    [Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: -2}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: -2}],
+    [Vec2 { x: 0, y: 0 }; 4],
+    [
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: 1, y: 0 },
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: -1, y: 0 },
+    ],
+    [
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: 1, y: 1 },
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: -1, y: 1 },
+    ],
+    [
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: 0, y: -2 },
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: 0, y: -2 },
+    ],
+    [
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: 1, y: -2 },
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: -1, y: -2 },
+    ],
 ];
 
 const J: TetriminoPrimitive = TetriminoPrimitive::new(
     TetriminoType::J,
     Color::Xterm(9),
-    [Vec2 {x: -1, y: -1}, Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
+    [
+        Vec2 { x: -1, y: -1 },
+        Vec2 { x: -1, y: 0 },
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: 1, y: 0 },
+    ],
 );
 
 const L: TetriminoPrimitive = TetriminoPrimitive::new(
     TetriminoType::L,
     Color::Xterm(10),
-    [Vec2 {x: 1, y: -1}, Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
+    [
+        Vec2 { x: 1, y: -1 },
+        Vec2 { x: -1, y: 0 },
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: 1, y: 0 },
+    ],
 );
 
 const S: TetriminoPrimitive = TetriminoPrimitive::new(
     TetriminoType::S,
     Color::Xterm(11),
-    [Vec2 {x: 1, y: -1}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}],
+    [
+        Vec2 { x: 1, y: -1 },
+        Vec2 { x: 0, y: -1 },
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: -1, y: 0 },
+    ],
 );
 
 const T: TetriminoPrimitive = TetriminoPrimitive::new(
     TetriminoType::T,
     Color::Xterm(12),
-    [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
+    [
+        Vec2 { x: -1, y: 0 },
+        Vec2 { x: 0, y: -1 },
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: 1, y: 0 },
+    ],
 );
 
 const Z: TetriminoPrimitive = TetriminoPrimitive::new(
     TetriminoType::Z,
     Color::Xterm(13),
-    [Vec2 {x: 1, y: 0}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: -1}],
+    [
+        Vec2 { x: 1, y: 0 },
+        Vec2 { x: 0, y: -1 },
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: -1, y: -1 },
+    ],
 );
 
 const I: TetriminoPrimitive = TetriminoPrimitive::new(
     TetriminoType::I,
     Color::Xterm(14),
-    [Vec2 {x: -1, y: 0}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}, Vec2 {x: 2, y: 0}],
+    [
+        Vec2 { x: -1, y: 0 },
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: 1, y: 0 },
+        Vec2 { x: 2, y: 0 },
+    ],
 );
 
 const O: TetriminoPrimitive = TetriminoPrimitive::new(
     TetriminoType::O,
     Color::Xterm(15),
-    [Vec2 {x: 1, y: -1}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
+    [
+        Vec2 { x: 1, y: -1 },
+        Vec2 { x: 0, y: -1 },
+        Vec2 { x: 0, y: 0 },
+        Vec2 { x: 1, y: 0 },
+    ],
 );
-//left: [Vec2 {x: 1, y: 1}, Vec2 {x: 0, y: 1}, Vec2 {x: 0, y: 0}, Vec2 {x: 1, y: 0}],
-//right: [Vec2 {x: -1, y: 1}, Vec2 {x: 0, y: 1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}],
-//two: [Vec2 {x: -1, y: -1}, Vec2 {x: 0, y: -1}, Vec2 {x: 0, y: 0}, Vec2 {x: -1, y: 0}],
 
 #[derive(Clone, Eq)]
 struct Tile {
@@ -284,13 +373,13 @@ impl Tetrimino<'_> {
         translation: Vec2,
         blocking_tiles: &[Tile],
         arena_dimensions: &Vec2,
-    ) -> bool {
+    ) -> Result<()> {
         let new_locations = self.get_locations(self.origin + translation, &self.rotation);
         match self.can_move(new_locations, blocking_tiles, arena_dimensions) {
             MovementCheck::CanMove => {
                 self.origin += translation;
                 true
-            },
+            }
             MovementCheck::TouchingWall => true,
             MovementCheck::TouchingStack => false,
         }
@@ -298,20 +387,16 @@ impl Tetrimino<'_> {
 
     fn get_locations(&self, origin: Vec2, rotation: &Rotation) -> [Vec2; 4] {
         let mut relative_locations = self.primitive.get_positions(&rotation);
-        relative_locations
-            .iter_mut()
-            .for_each(|p| *p += origin);
+        relative_locations.iter_mut().for_each(|p| *p += origin);
         relative_locations
     }
 
     fn get_tiles(&self) -> [Tile; 4] {
         let relative_positions = self.primitive.get_positions(&self.rotation);
-        core::array::from_fn(
-            |i| Tile {
-                color: self.primitive.color,
-                location: relative_positions[i] + self.origin
-            }
-        )
+        core::array::from_fn(|i| Tile {
+            color: self.primitive.color,
+            location: relative_positions[i] + self.origin,
+        })
     }
 
     fn can_move(
@@ -322,13 +407,18 @@ impl Tetrimino<'_> {
     ) -> MovementCheck {
         for location in new_locations {
             match Tile::new(location) {
-                t if blocking_tiles.contains(&t) => { return MovementCheck::TouchingStack; },
-                t if t.y > arena_dimensions.y => { return MovementCheck::TouchingStack; },
-                _ => (),
-            };
-            match location {
-                t if t.x < 0 => { return MovementCheck::TouchingWall; },
-                t if t.x > arena_dimensions.x => { return MovementCheck::TouchingWall; },
+                t if blocking_tiles.contains(&t) => {
+                    return MovementCheck::TouchingStack;
+                }
+                t if t.y > arena_dimensions.y => {
+                    return MovementCheck::TouchingStack;
+                }
+                t if t.x < 0 => {
+                    return MovementCheck::TouchingWall;
+                }
+                t if t.x > arena_dimensions.x => {
+                    return MovementCheck::TouchingWall;
+                }
                 _ => (),
             };
         }
@@ -347,42 +437,50 @@ impl Tetrimino<'_> {
                 Rotation::Right => Rotation::Two,
                 Rotation::Two => Rotation::Left,
                 Rotation::Left => Rotation::Zero,
-            }
+            },
 
             RotationDirection::Counterclockwise => match self.rotation {
                 Rotation::Zero => Rotation::Left,
                 Rotation::Left => Rotation::Two,
                 Rotation::Two => Rotation::Right,
                 Rotation::Right => Rotation::Zero,
-            }
+            },
         };
-
-        let rotated_positions = self.primitive.get_positions(&new_rotation);
 
         match self.primitive.get_wall_kicks(&self.rotation, &new_rotation) {
-            TetriminoWallKicks::O(kick) => {
-                self.rotation = new_rotation;
-                self.origin += kick;
-            },
+            TetriminoWallKicks::O(kick) => self.perform_rotation(kick, new_rotation),
 
             TetriminoWallKicks::Other(kicks) => {
-                for kick in kicks.iter() {
-                    let kicked_locations: [Vec2; 4] = core::array::from_fn(
-                        |i| *kick + rotated_positions[i] + self.origin);
-
-                    match self.can_move(
-                        kicked_locations, blocking_tiles, arena_dimensions) {
-                        MovementCheck::CanMove => {
-                            self.rotation = new_rotation;
-                            self.origin += *kick;
-                            break;
-                        }
-                        _ => (),
-                    }
-                }
-                return;
+                self.non_o_wall_kick_checks(kicks, new_rotation, blocking_tiles, arena_dimensions);
             }
         };
+    }
+
+    fn non_o_wall_kick_checks(
+        &self,
+        kicks: [Vec2; 5],
+        new_rotation: Rotation,
+        blocking_tiles: &[Tile],
+        arena_dimensions: &Vec2,
+    ) {
+        let rotated_positions = self.primitive.get_positions(&new_rotation);
+        for kick in kicks.iter() {
+            let kicked_locations: [Vec2; 4] =
+                core::array::from_fn(|i| *kick + rotated_positions[i] + self.origin);
+
+            match self.can_move(kicked_locations, blocking_tiles, arena_dimensions) {
+                MovementCheck::CanMove => {
+                    self.perform_rotation(*kick, new_rotation);
+                    break;
+                }
+                _ => (),
+            }
+        }
+    }
+
+    fn perform_rotation(&self, kick: Vec2, new_rotation: Rotation) {
+        self.rotation = new_rotation;
+        self.origin += kick;
     }
 }
 
@@ -415,13 +513,16 @@ impl GameState<'_> {
         if self.last_update + self.drop_speed >= frame {
             return;
         }
-            
+
         self.last_update = frame;
-        
-        if self.current_tetrimino.translate(Vec2::y(1), &self.tiles, &self.dimension) {
+
+        if self
+            .current_tetrimino
+            .translate(Vec2::y(1), &self.tiles, &self.dimension)
+        {
             return;
         }
-                
+
         // make piece part of current tile set and spawn a new piece
         for tile in self.current_tetrimino.get_tiles() {
             self.tiles.push(tile.clone());
@@ -437,7 +538,8 @@ impl GameState<'_> {
     }
 
     pub fn rotate_tetrimino(&mut self, rotation_direction: RotationDirection) {
-        self.current_tetrimino.rotate(rotation_direction, &self.tiles, &self.dimension); 
+        self.current_tetrimino
+            .rotate(rotation_direction, &self.tiles, &self.dimension);
     }
 
     pub fn spawn_tetrimino(&mut self) {
@@ -452,7 +554,8 @@ impl GameState<'_> {
         self.last_input = (frame, displacement);
         let movement = Vec2::x(displacement);
 
-        self.current_tetrimino.translate(movement, &self.tiles, &self.dimension);
+        self.current_tetrimino
+            .translate(movement, &self.tiles, &self.dimension);
     }
 
     pub fn set_speed(&mut self, speed: usize) {
@@ -461,11 +564,12 @@ impl GameState<'_> {
 
     pub fn clear_rows(&mut self) {
         for y in 0..self.dimension.y + 1 {
-            let row: Vec<Vec2> = (0..self.dimension.x + 1)
-                .map(|x| Vec2::xy(x, y))
-                .collect();
+            let row: Vec<Vec2> = (0..self.dimension.x + 1).map(|x| Vec2::xy(x, y)).collect();
 
-            if !row.iter().all(|item| self.tiles.contains(&Tile::new(*item))) {
+            if !row
+                .iter()
+                .all(|item| self.tiles.contains(&Tile::new(*item)))
+            {
                 continue;
             }
 
@@ -596,11 +700,12 @@ fn game_loop(
 }
 
 fn main() {
-    let mut app = App::config(Config{ fps: FPS });
+    let mut app = App::config(Config { fps: FPS });
     let mut game_state = GameState::new(FIELD_SIZE);
     let mut default = VisualElement::new();
     default.background = BACKGROUND_COLOR;
-    let runnable_game_loop = |app_state: &mut State, window: &mut Window| game_loop(
-        &mut game_state, default, app_state, window);
+    let runnable_game_loop = |app_state: &mut State, window: &mut Window| {
+        game_loop(&mut game_state, default, app_state, window)
+    };
     app.run(runnable_game_loop);
 }
