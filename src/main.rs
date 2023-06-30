@@ -373,7 +373,7 @@ impl Tetrimino<'_> {
         translation: Vec2,
         blocking_tiles: &[Tile],
         arena_dimensions: &Vec2,
-    ) -> Result<()> {
+    ) -> bool {
         let new_locations = self.get_locations(self.origin + translation, &self.rotation);
         match self.can_move(new_locations, blocking_tiles, arena_dimensions) {
             MovementCheck::CanMove => {
@@ -457,7 +457,7 @@ impl Tetrimino<'_> {
     }
 
     fn non_o_wall_kick_checks(
-        &self,
+        &mut self,
         kicks: [Vec2; 5],
         new_rotation: Rotation,
         blocking_tiles: &[Tile],
@@ -478,7 +478,7 @@ impl Tetrimino<'_> {
         }
     }
 
-    fn perform_rotation(&self, kick: Vec2, new_rotation: Rotation) {
+    fn perform_rotation(&mut self, kick: Vec2, new_rotation: Rotation) {
         self.rotation = new_rotation;
         self.origin += kick;
     }
@@ -492,7 +492,7 @@ struct GameState<'a> {
     pub last_update: usize,
     pub last_input: (usize, i32), // frame, direction
     pub drop_speed: usize,
-    pub hit_ceiling: bool,
+    hit_ceiling: bool,
 }
 
 impl GameState<'_> {
@@ -563,27 +563,54 @@ impl GameState<'_> {
     }
 
     pub fn clear_rows(&mut self) {
-        for y in 0..self.dimension.y + 1 {
-            let row: Vec<Vec2> = (0..self.dimension.x + 1).map(|x| Vec2::xy(x, y)).collect();
+        let full_rows = self.get_full_rows();
+        let lowest_full_row: i32;
 
-            if !row
-                .iter()
-                .all(|item| self.tiles.contains(&Tile::new(*item)))
-            {
-                continue;
-            }
-
-            self.score += 1;
-            self.tiles.retain(|t| t.y != y);
-
-            for tile in &mut self.tiles {
-                if tile.y >= y {
-                    continue;
-                }
-
-                tile.y += 1;
+        match full_rows.iter().max() {
+            Some(&min) => lowest_full_row = min,
+            None => {
+                return;
             }
         }
+
+        match full_rows.len() {
+            4 => {
+                self.score += 1200;
+            }
+            3 => {
+                self.score += 300;
+            }
+            2 => {
+                self.score += 100;
+            }
+            1 => {
+                self.score += 40;
+            }
+            _ => (),
+        }
+
+        self.tiles.retain(|t| !full_rows.contains(&t.y));
+
+        for tile in &mut self.tiles {
+            if tile.y < lowest_full_row {
+                tile.y += full_rows.len() as i32;
+            }
+        }
+    }
+
+    fn get_full_rows(&self) -> Vec<i32> {
+        let mut row_sums = [0; 1 + FIELD_SIZE.y as usize];
+        for tile in &self.tiles {
+            row_sums[tile.y as usize] += 1;
+        }
+        let mut full_rows: Vec<i32> = vec![];
+        for (row, sum) in row_sums.iter().enumerate() {
+            if *sum <= self.dimension.x {
+                continue;
+            }
+            full_rows.push(row as i32);
+        }
+        full_rows
     }
 }
 
