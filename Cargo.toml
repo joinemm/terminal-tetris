@@ -9,3 +9,4 @@ edition = "2021"
 [dependencies]
 rand = "0.8.3"
 ruscii = "0.3.2"
+x11 = "2.21.0"
